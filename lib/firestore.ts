@@ -1,0 +1,264 @@
+import { db } from "./firebase";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  addDoc,
+  getDocs, 
+  getDoc,
+  query, 
+  orderBy, 
+  where,
+  limit,
+  Timestamp,
+  deleteDoc
+} from "firebase/firestore";
+
+// Types
+export interface TestAttempt {
+  id?: string;
+  testId: string;
+  testTitle: string;
+  category: string;
+  score: number;
+  totalMarks: number;
+  accuracy: number;
+  timeSpentStr: string;
+  answers: Record<number, string>;
+  dateCompleted: Date;
+}
+
+export interface SavedQuestion {
+  id?: string;
+  questionId: string;
+  subject: string;
+  topic: string;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  userNotes?: string;
+  imageUrl?: string;
+  savedAt: Date;
+  explanation?: string;
+}
+
+export interface Note {
+  id?: string;
+  title: string;
+  content: string;
+  subject: string;
+  topic: string;
+  lastModified: Date;
+}
+
+// Subject Normalization Utility
+export const normalizeSubject = (subject: string): string => {
+  const s = subject.toLowerCase();
+  if (s.includes("math") || s.includes("quant")) return "Maths";
+  if (s.includes("english") || s.includes("vocab") || s.includes("grammar")) return "English";
+  if (s.includes("reasoning") || s.includes("intelligence")) return "Reasoning";
+  if (s.includes("awareness") || s.includes("gs") || s.includes("ga") || s.includes("science") || s.includes("history") || s.includes("polity")) return "GS";
+  if (s.includes("computer")) return "Computer";
+  return subject; // Fallback to original if no match
+};
+
+// -------------------------------------------------------------
+// Test Attempts API
+// -------------------------------------------------------------
+
+export const saveTestAttempt = async (userId: string, attempt: Omit<TestAttempt, "id" | "dateCompleted">) => {
+  if (!userId) throw new Error("User ID is required");
+  
+  const attemptsRef = collection(db, "users", userId, "test_attempts");
+  const newAttemptData = {
+    ...attempt,
+    dateCompleted: Timestamp.now(),
+  };
+
+  const docRef = await addDoc(attemptsRef, newAttemptData);
+  return docRef.id;
+};
+
+export const getUserTestAttempts = async (userId: string): Promise<TestAttempt[]> => {
+  if (!userId) return [];
+
+  const attemptsRef = collection(db, "users", userId, "test_attempts");
+  const q = query(attemptsRef, orderBy("dateCompleted", "desc"));
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      dateCompleted: data.dateCompleted.toDate(),
+    } as TestAttempt;
+  });
+};
+
+export const getTestAttempt = async (userId: string, testId: string): Promise<TestAttempt | null> => {
+  if (!userId || !testId) return null;
+  const attemptsRef = collection(db, "users", userId, "test_attempts");
+  const q = query(attemptsRef, where("testId", "==", testId), orderBy("dateCompleted", "desc"), limit(1));
+  const querySnapshot = await getDocs(q);
+  
+  if (querySnapshot.empty) return null;
+  
+  const docSnap = querySnapshot.docs[0];
+  const data = docSnap.data();
+  return {
+    id: docSnap.id,
+    ...data,
+    dateCompleted: data.dateCompleted.toDate(),
+  } as TestAttempt;
+};
+
+// -------------------------------------------------------------
+// Saved Questions API
+// -------------------------------------------------------------
+
+export const saveQuestion = async (userId: string, question: Omit<SavedQuestion, "id" | "savedAt">) => {
+  if (!userId) throw new Error("User ID is required");
+
+  // Use the specific questionId as document ID so a user can't save the same question twice
+  const questionRef = doc(db, "users", userId, "saved_questions", question.questionId);
+  
+  const questionData = {
+    ...question,
+    savedAt: Timestamp.now(),
+  };
+
+  await setDoc(questionRef, questionData);
+  return question.questionId;
+};
+
+export const getSavedQuestions = async (userId: string): Promise<SavedQuestion[]> => {
+  if (!userId) return [];
+
+  const questionsRef = collection(db, "users", userId, "saved_questions");
+  const q = query(questionsRef, orderBy("savedAt", "desc"));
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      savedAt: data.savedAt.toDate(),
+    } as SavedQuestion;
+  });
+};
+
+export const deleteSavedQuestion = async (userId: string, questionId: string) => {
+  if (!userId || !questionId) throw new Error("User ID and Question ID are required");
+  
+  const questionRef = doc(db, "users", userId, "saved_questions", questionId);
+  await deleteDoc(questionRef);
+};
+
+// -------------------------------------------------------------
+// Notes API
+// -------------------------------------------------------------
+
+export const saveNote = async (userId: string, note: Omit<Note, "id" | "lastModified">, noteId?: string) => {
+  if (!userId) throw new Error("User ID is required");
+  
+  const notesRef = noteId 
+    ? doc(db, "users", userId, "notes", noteId)
+    : doc(collection(db, "users", userId, "notes"));
+    
+  const noteData = {
+    ...note,
+    lastModified: Timestamp.now(),
+  };
+
+  await setDoc(notesRef, noteData, { merge: true });
+  return notesRef.id;
+};
+
+export const getUserNotes = async (userId: string): Promise<Note[]> => {
+  if (!userId) return [];
+
+  const notesRef = collection(db, "users", userId, "notes");
+  const q = query(notesRef, orderBy("lastModified", "desc"));
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      lastModified: data.lastModified.toDate(),
+    } as Note;
+  });
+};
+
+export const deleteNote = async (userId: string, noteId: string) => {
+  if (!userId || !noteId) throw new Error("User ID and Note ID are required");
+  const noteRef = doc(db, "users", userId, "notes", noteId);
+  await deleteDoc(noteRef);
+};
+
+// -------------------------------------------------------------
+// Mock Tests API (Admin Uploads)
+// -------------------------------------------------------------
+
+export const getUploadedTestIds = async (): Promise<string[]> => {
+  const testsRef = collection(db, "mock_tests");
+  // We just need the document IDs to know which tests actually exist
+  const querySnapshot = await getDocs(testsRef);
+  return querySnapshot.docs.map(doc => doc.id);
+};
+
+export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked: boolean}[]> => {
+  const testsRef = collection(db, "mock_tests");
+  const querySnapshot = await getDocs(testsRef);
+  return querySnapshot.docs.map(doc => ({ 
+    id: doc.id, 
+    isLocked: doc.data().isLocked !== undefined ? doc.data().isLocked : false 
+  }));
+};
+
+export const updateMockTestLockStatus = async (testId: string, isLocked: boolean) => {
+  const testRef = doc(db, "mock_tests", testId);
+  await setDoc(testRef, { isLocked }, { merge: true });
+};
+
+export const getMockTest = async (testId: string) => {
+  if (!testId) return null;
+  const testRef = doc(db, "mock_tests", testId);
+  const docSnap = await getDoc(testRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() };
+  }
+  return null;
+};
+
+export const deleteMockTest = async (testId: string) => {
+  if (!testId) throw new Error("Test ID is required");
+  const testRef = doc(db, "mock_tests", testId);
+  await deleteDoc(testRef);
+};
+
+export const uploadPracticeQuestions = async (subjectSlug: string, topicSlug: string, questionsData: any[]) => {
+  if (!subjectSlug || !topicSlug) throw new Error("Subject and Topic are required");
+  const docId = `${subjectSlug}_${topicSlug}`;
+  const docRef = doc(db, "practice_questions", docId);
+  await setDoc(docRef, {
+    subjectSlug,
+    topicSlug,
+    questionsData,
+    updatedAt: new Date()
+  }, { merge: true });
+};
+
+export const getPracticeQuestions = async (subjectSlug: string, topicSlug: string) => {
+  if (!subjectSlug || !topicSlug) return null;
+  const docId = `${subjectSlug}_${topicSlug}`;
+  const docRef = doc(db, "practice_questions", docId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return docSnap.data().questionsData || [];
+  }
+  return [];
+};
