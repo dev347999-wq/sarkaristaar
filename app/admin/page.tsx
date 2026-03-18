@@ -65,19 +65,26 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!loading && (!user || user.email !== adminEmail)) {
-      router.push("/dashboard");
+      router.push("/login");
     }
   }, [user, loading, router, adminEmail]);
 
-  if (loading || !user || user.email !== adminEmail) {
+  // Show spinner while Firebase is initializing OR while not yet confirmed as admin.
+  // This prevents ANY flash of admin content to unauthenticated users.
+  if (loading || !user) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
           <p className="text-muted-foreground">Verifying admin access...</p>
         </div>
       </div>
     );
+  }
+
+  // If logged in but not the admin, don't render anything (redirect is in progress)
+  if (user.email !== adminEmail) {
+    return null;
   }
 
   const handleUpload = async () => {
