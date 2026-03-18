@@ -64,7 +64,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && (!user || user.email !== adminEmail)) {
+    if (!loading && (!user || !adminEmail || user.email !== adminEmail)) {
       router.push("/login");
     }
   }, [user, loading, router, adminEmail]);
@@ -83,7 +83,7 @@ export default function AdminPage() {
   }
 
   // If logged in but not the admin, don't render anything (redirect is in progress)
-  if (user.email !== adminEmail) {
+  if (!adminEmail || user.email !== adminEmail) {
     return null;
   }
 

@@ -31,7 +31,10 @@ function NavbarClock() {
 export function Navbar() {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
-  const isAdmin = user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+  // Require a logged-in user AND a non-empty admin email to prevent
+  // undefined === undefined from incorrectly returning true.
+  const isAdmin = !!user && !!adminEmail && user.email === adminEmail;
   
   // Hide Navbar when taking a test or viewing full screen analysis
   if (pathname?.startsWith('/mock-tests/') && pathname !== '/mock-tests') {
