@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Star, Menu, UserCircle, LogOut, Clock } from "lucide-react";
+import { Star, Menu, X, UserCircle, LogOut, Clock } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/context/AuthContext";
 
@@ -35,11 +35,21 @@ export function Navbar() {
   // Require a logged-in user AND a non-empty admin email to prevent
   // undefined === undefined from incorrectly returning true.
   const isAdmin = !!user && !!adminEmail && user.email === adminEmail;
+  const [mobileOpen, setMobileOpen] = useState(false);
   
   // Hide Navbar when taking a test or viewing full screen analysis
   if (pathname?.startsWith('/mock-tests/') && pathname !== '/mock-tests') {
      return null;
   }
+
+  const navLinks = [
+    { href: "/", label: "Home" },
+    { href: "/mock-tests", label: "Mock Tests" },
+    { href: "/practice", label: "Practice" },
+    { href: "/vocab-grammar", label: "Vocab & Grammar" },
+    { href: "/notes", label: "Notes" },
+    { href: "/dashboard", label: "Dashboard" },
+  ];
   
   return (
     <nav className="border-b bg-background sticky top-0 z-50">
@@ -55,18 +65,19 @@ export function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
-            <Link href="/mock-tests" className="text-sm font-medium hover:text-primary transition-colors">Mock Tests</Link>
-            <Link href="/practice" className="text-sm font-medium hover:text-primary transition-colors">Practice</Link>
-            <Link href="/vocab-grammar" className="text-sm font-medium hover:text-secondary transition-colors relative">
-              Vocab & Grammar
-              <span className="absolute -top-2 -right-3 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
-              </span>
-            </Link>
-            <Link href="/notes" className="text-sm font-medium hover:text-primary transition-colors">Notes</Link>
-            <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">Dashboard</Link>
+            {navLinks.map(link => (
+              <Link key={link.href} href={link.href} className="text-sm font-medium hover:text-primary transition-colors">
+                {link.label === "Vocab & Grammar" ? (
+                  <span className="relative">
+                    {link.label}
+                    <span className="absolute -top-2 -right-3 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+                    </span>
+                  </span>
+                ) : link.label}
+              </Link>
+            ))}
             {isAdmin && (
               <Link href="/admin" className="text-sm font-bold text-amber-500 hover:text-amber-600 transition-colors bg-amber-500/10 px-3 py-1 rounded-full">
                 Admin Area
@@ -111,12 +122,71 @@ export function Navbar() {
                 Login
               </Link>
             )}
-            <button className="md:hidden p-2 text-foreground">
-              <Menu className="h-6 w-6" />
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden p-2 text-foreground rounded-md hover:bg-muted transition-colors"
+              onClick={() => setMobileOpen(prev => !prev)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border bg-background animate-in slide-in-from-top-2 duration-200">
+          <div className="px-4 py-3 space-y-1">
+            {navLinks.map(link => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold text-amber-500 hover:bg-amber-500/10 transition-colors"
+              >
+                Admin Area
+              </Link>
+            )}
+          </div>
+
+          {/* Mobile User Section */}
+          <div className="px-4 pb-4 border-t border-border/50 mt-2 pt-3">
+            {user ? (
+              <div className="space-y-1">
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  Signed in as <span className="font-semibold text-foreground">{user.displayName || user.email}</span>
+                </div>
+                <button
+                  onClick={() => { signOut(); setMobileOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+              >
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
+
