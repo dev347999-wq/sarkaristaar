@@ -26,7 +26,7 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     
     // First 3 tests are free. For now, logic implies Free/Paid logic assumes the test actually EXISTS (isUploaded)
     const isFree = i < 3;
-    let status: "Available" | "Completed" | "Locked" = "Locked";
+    let status: "Available" | "Completed" | "Locked" | "Live Soon" = "Live Soon";
     let score = undefined;
     
     if (attempt) {
@@ -229,11 +229,16 @@ export default function MockTestsPage() {
                 questions={test.questions} 
                 marks={test.marks} 
                 isFree={test.isFree} 
-                status={test.status as "Available" | "Completed" | "Locked"} 
+                status={test.status as "Available" | "Completed" | "Locked" | "Live Soon"} 
                 score={test.score}
                 packagePrice={!test.isFree && !isCategoryUnlocked ? PACKAGE_PRICING[mainCategory].price : undefined}
                 packageName={PACKAGE_PRICING[mainCategory].name}
                 onStart={() => router.push(`/mock-tests/${test.id}`)}
+                onPaymentSuccess={() => {
+                  const newSet = new Set(userPurchases);
+                  newSet.add(PACKAGE_PRICING[mainCategory].name);
+                  setUserPurchases(newSet);
+                }}
               />
             ))}
           </div>

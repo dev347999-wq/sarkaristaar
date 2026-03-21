@@ -6,19 +6,21 @@ export interface TestCardProps {
   duration: string;
   questions: number | string;
   marks: number | string;
-  status: "Available" | "Completed" | "Locked";
+  status: "Available" | "Completed" | "Locked" | "Live Soon";
   isFree?: boolean;
   score?: string;
   packagePrice?: number;
   packageName?: string;
   onStart?: () => void;
   onAnalysis?: () => void;
+  onPaymentSuccess?: () => void;
 }
 
-export function TestCard({ title, duration, questions, marks, status, isFree, score, packagePrice, packageName, onStart, onAnalysis }: TestCardProps) {
+export function TestCard({ title, duration, questions, marks, status, isFree, score, packagePrice, packageName, onStart, onAnalysis, onPaymentSuccess }: TestCardProps) {
   const isCompleted = status === "Completed";
   const isLocked = status === "Locked";
   const isAvailable = status === "Available";
+  const isLiveSoon = status === "Live Soon";
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between p-6 rounded-xl border bg-card hover:border-primary/50 hover:shadow-sm transition-all duration-300 gap-4">
@@ -49,21 +51,25 @@ export function TestCard({ title, duration, questions, marks, status, isFree, sc
             itemName={packageName || "Premium Package"}
             buttonText={`Unlock ${packageName?.split(" ")[0]} Package (₹${packagePrice})`}
             className="flex items-center justify-center gap-2 h-10 px-6 rounded-lg font-medium text-sm transition-all duration-300 flex-shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5"
+            onPaymentSuccess={onPaymentSuccess}
           />
         ) : (
           <button 
-            disabled={isLocked}
+            disabled={isLocked || isLiveSoon}
             onClick={isCompleted ? onAnalysis : onStart}
             className={`flex items-center justify-center gap-2 h-10 px-6 rounded-lg font-medium text-sm transition-all duration-300 flex-shrink-0 ${
               isAvailable 
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow shadow-primary/20 hover:scale-105' 
                 : isCompleted 
                   ? 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 disabled:opacity-50'
+                  : isLiveSoon
+                    ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 disabled:opacity-50'
             }`}
           >
             {isAvailable && <><PlayCircle className="w-4 h-4" /> Start Test</>}
             {isCompleted && "View Analysis"}
+            {isLiveSoon && "Will Be Live Soon"}
             {isLocked && "Locked"}
           </button>
         )}

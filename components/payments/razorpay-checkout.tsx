@@ -23,13 +23,15 @@ interface RazorpayCheckoutButtonProps {
   itemName?: string;
   buttonText?: string;
   className?: string;
+  onPaymentSuccess?: () => void;
 }
 
 export function RazorpayCheckoutButton({ 
   amount = 499, 
   itemName = "Premium Access",
   buttonText,
-  className = "inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 shadow hover:shadow-md disabled:opacity-50"
+  className = "inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 shadow hover:shadow-md disabled:opacity-50",
+  onPaymentSuccess
 }: RazorpayCheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -123,6 +125,11 @@ export function RazorpayCheckoutButton({
         theme: {
           color: "#0f172a", // Match app primary standard color
         },
+        modal: {
+          ondismiss: function() {
+            setIsLoading(false);
+          }
+        }
       };
 
       const rzp = new (window as any).Razorpay(options);
