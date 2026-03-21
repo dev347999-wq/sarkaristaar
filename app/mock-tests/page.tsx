@@ -115,7 +115,7 @@ const CATEGORY_STRUCTURE = {
 
 const PACKAGE_PRICING = {
   "SSC CGL": { price: 250, name: "SSC CGL Pro (Pre + Mains)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] },
-  "RRB NTPC": { price: 100, name: "RRB NTPC Pro (CBT 1 + CBT 2)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
+  "RRB NTPC": { price: 10, name: "RRB NTPC Pro (CBT 1 + CBT 2)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
 };
 
 type MainCategory = keyof typeof CATEGORY_STRUCTURE;
