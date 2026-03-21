@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { recordPurchase } from "@/lib/firestore";
 
 const loadScript = (src: string) => {
   return new Promise((resolve) => {
@@ -104,9 +105,19 @@ export function RazorpayCheckoutButton({
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
+              // 4. Save to Firestore explicitly from the Client
+              await recordPurchase(user.uid, itemName, {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                amount: order.amount,
+                date: new Date().toISOString()
+              });
+
               alert(`Payment Successful! Your package has been unlocked.`);
-              router.refresh(); // Refresh page to reflect new unlocked status
-              // Optionally trigger an event if passed via props, e.g., onPaymentSuccess
+              if (onPaymentSuccess) {
+                onPaymentSuccess();
+              }
+              router.refresh(); 
             } else {
               alert(`Payment verification failed: ${verifyData.error}`);
             }

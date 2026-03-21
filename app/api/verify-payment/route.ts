@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { recordPurchase } from '@/lib/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -35,16 +34,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 });
     }
 
-    // Step 4: Store fields in server
-    // Signature verified, now save the purchase to Firestore
-    await recordPurchase(userId, packageId, {
-      orderId: razorpay_order_id,
-      paymentId: razorpay_payment_id,
-      amount: body.amount, // Optional depending on frontend
-      date: new Date().toISOString()
-    });
-
-    return NextResponse.json({ success: true, message: 'Payment verified and purchase recorded' });
+    // Signature verified!
+    return NextResponse.json({ success: true, message: 'Payment verified' });
   } catch (error: any) {
     console.error('Error verifying Razorpay payment:', error);
     return NextResponse.json(
