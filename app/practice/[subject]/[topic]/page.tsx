@@ -73,9 +73,10 @@ export default function TopicPracticePage() {
 
     if (user) {
       try {
+        const questionId = currentQ.id || `practice-${subjectSlug}-${topicSlug}-${currentIndex}`;
         if (newSavedState) {
           await saveQuestion(user.uid, {
-            questionId: currentQ.id,
+            questionId,
             subject: normalizeSubject(subjectName),
             topic: topicName,
             questionText: currentQ.question,
@@ -84,7 +85,7 @@ export default function TopicPracticePage() {
             imageUrl: currentQ.imageUrl,
           });
         } else {
-          await deleteSavedQuestion(user.uid, currentQ.id);
+          await deleteSavedQuestion(user.uid, questionId);
         }
       } catch (error) {
         console.error("Failed to sync saved question to Firestore:", error);

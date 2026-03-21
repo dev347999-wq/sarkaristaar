@@ -119,14 +119,22 @@ export const getTestAttempt = async (userId: string, testId: string): Promise<Te
 
 export const saveQuestion = async (userId: string, question: Omit<SavedQuestion, "id" | "savedAt">) => {
   if (!userId) throw new Error("User ID is required");
+  if (!question.questionId) throw new Error("Question ID is required");
 
   // Use the specific questionId as document ID so a user can't save the same question twice
   const questionRef = doc(db, "users", userId, "saved_questions", question.questionId);
   
-  const questionData = {
+  const questionData: any = {
     ...question,
     savedAt: Timestamp.now(),
   };
+
+  // Firestore throws an error if you try to save 'undefined'. Remove undefined fields.
+  Object.keys(questionData).forEach(key => {
+    if (questionData[key] === undefined) {
+      delete questionData[key];
+    }
+  });
 
   await setDoc(questionRef, questionData);
   return question.questionId;
