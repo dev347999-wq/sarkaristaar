@@ -24,18 +24,20 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     const attempt = userAttempts[testId];
     const isUploaded = uploadedTestIds.has(testId);
     
-    // First 3 tests are free. For now, logic implies Free/Paid logic assumes the test actually EXISTS (isUploaded)
+    // First 3 tests are free.
     const isFree = i < 3;
-    let status: "Available" | "Completed" | "Locked" | "Live Soon" = "Live Soon";
+    let status: "Available" | "Completed" | "Locked" | "Live Soon";
     let score = undefined;
     
     if (attempt) {
       status = "Completed";
       score = `${attempt.score}/${attempt.totalMarks}`;
-    } else if (isUploaded) {
-      // If it's uploaded and free, it's available. If it's uploaded and NOT free, 
-      // it is available if they have unlocked the category
-      status = (isFree || isCategoryUnlocked) ? "Available" : "Locked"; 
+    } else if (isFree || isCategoryUnlocked) {
+      // User has access (it's free or they bought it)
+      status = isUploaded ? "Available" : "Live Soon";
+    } else {
+      // User doesn't have access -> show "Locked" which renders the checkout button
+      status = "Locked";
     }
 
     return {
