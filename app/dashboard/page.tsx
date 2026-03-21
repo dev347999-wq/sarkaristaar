@@ -5,6 +5,7 @@ import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote } from
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getUserTestAttempts, getSavedQuestions, TestAttempt, SavedQuestion, normalizeSubject } from "@/lib/firestore";
+import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -62,9 +63,12 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {user?.displayName || "Student"}! Here is your performance overview.</p>
         </div>
-        <Link href="/practice" className="inline-flex justify-center items-center rounded-md bg-primary text-primary-foreground h-10 px-4 font-medium hover:bg-primary/90 transition-colors">
-          Resume Practice
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/practice" className="inline-flex justify-center items-center rounded-md bg-secondary text-secondary-foreground border border-input h-10 px-4 font-medium hover:bg-secondary/80 transition-colors">
+            Resume Practice
+          </Link>
+          <RazorpayCheckoutButton amount={499} itemName="Premium Access" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

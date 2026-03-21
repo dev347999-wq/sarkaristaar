@@ -34,3 +34,15 @@ If your code isn't on GitHub yet:
 3. Vercel will provide **DNS records** (A record or CNAME).
 4. Go to your domain registrar (e.g., GoDaddy, Namecheap) and add those DNS records.
 5. Wait for SSL and DNS propagation (usually a few minutes).
+
+<!-- slide -->
+## Step 4: Authorize Domain in Firebase (CRITICAL)
+If you do not add your custom domain to Firebase Auth, login will fail with an `auth/unauthorized-domain` error on the production site.
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Select your project (**sarkaristaar-365cd**).
+3. In the left sidebar, click **Authentication**, then go to the **Settings** tab.
+4. Click on **Authorized domains**.
+5. Click **Add domain** and enter your custom domain exactly as it appears in the Vercel URL (e.g., `yourdomain.com` without `https://`).
+6. Click **Add**.
+
+*Note for Google Sign-In:* If you manually set up an OAuth client ID, ensure you also add your new domain to the **Authorized JavaScript origins** and **Authorized redirect URIs** in the [Google Cloud Console Credentials page](https://console.cloud.google.com/apis/credentials).

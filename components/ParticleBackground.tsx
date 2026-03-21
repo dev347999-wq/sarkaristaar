@@ -35,7 +35,7 @@ export default function ParticleBackground() {
         background: { color: { value: "transparent" } },
         fullScreen: { enable: true, zIndex: -1 },
         particles: {
-          number: { value: 60 },
+          number: { value: 30 },
           color: { value: ["#f97316", "#22c55e"] }, // Sarkari Star Orange and Green
           move: {
             enable: true,

@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { TestCard } from "@/components/test-card";
 import { useAuth } from "@/context/AuthContext";
-import { getUserTestAttempts, getUploadedTestsMetadata, TestAttempt } from "@/lib/firestore";
+import { getUserTestAttempts, getUploadedTestsMetadata, getUserPurchases, TestAttempt } from "@/lib/firestore";
+import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 // Generator for mock tests
-const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestIds: Set<string>) => {
+const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestIds: Set<string>, isCategoryUnlocked: boolean) => {
   const prefixMap: Record<string, string> = {
     "SSC CGL Tier 1": "SSC CGL Pre",
     "SSC CGL Tier 2": "SSC CGL Mains",
@@ -33,8 +34,8 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
       score = `${attempt.score}/${attempt.totalMarks}`;
     } else if (isUploaded) {
       // If it's uploaded and free, it's available. If it's uploaded and NOT free, 
-      // it would be available if they had the Pro package. (Defaulting to Available for Free tests for now)
-      status = isFree ? "Available" : "Locked"; 
+      // it is available if they have unlocked the category
+      status = (isFree || isCategoryUnlocked) ? "Available" : "Locked"; 
     }
 
     return {
@@ -125,6 +126,7 @@ export default function MockTestsPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("SSC CGL Tier 1");
   const [userAttemptsMap, setUserAttemptsMap] = useState<Record<string, TestAttempt>>({});
   const [uploadedTestIds, setUploadedTestIds] = useState<Set<string>>(new Set());
+  const [userPurchases, setUserPurchases] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // 1. Fetch which tests actually exist in the database and are UNLOCKED
@@ -133,18 +135,23 @@ export default function MockTestsPage() {
       setUploadedTestIds(new Set(unlockedIds));
     }).catch(console.error);
 
-    // 2. Fetch the user's personal attempts
+    // 2. Fetch the user's personal attempts and purchases
     if (user) {
-      getUserTestAttempts(user.uid).then((attempts) => {
+      Promise.all([
+        getUserTestAttempts(user.uid),
+        getUserPurchases(user.uid)
+      ]).then(([attempts, purchases]) => {
         // Create a dictionary for O(1) lookups by testId
         const map: Record<string, TestAttempt> = {};
         attempts.forEach(a => {
           map[a.testId] = a;
         });
         setUserAttemptsMap(map);
+        setUserPurchases(new Set(purchases));
       });
     } else {
       setUserAttemptsMap({});
+      setUserPurchases(new Set());
     }
   }, [user]);
 
@@ -153,10 +160,12 @@ export default function MockTestsPage() {
     setActiveCategory(CATEGORY_STRUCTURE[main][0].key as Category);
   };
   
+  const isCategoryUnlocked = userPurchases.has(PACKAGE_PRICING[mainCategory].name);
+
   // Memoize generation so it only recalculates when activeCategory, attempts, or uploads change
   const tests = useMemo(
-    () => generateTests(activeCategory, 100, TEST_CATEGORIES[activeCategory].config, userAttemptsMap, uploadedTestIds),
-    [activeCategory, userAttemptsMap, uploadedTestIds]
+    () => generateTests(activeCategory, 100, TEST_CATEGORIES[activeCategory].config, userAttemptsMap, uploadedTestIds, isCategoryUnlocked),
+    [activeCategory, userAttemptsMap, uploadedTestIds, isCategoryUnlocked]
   );
   
   const activePattern = TEST_CATEGORIES[activeCategory];
@@ -222,7 +231,7 @@ export default function MockTestsPage() {
                 isFree={test.isFree} 
                 status={test.status as "Available" | "Completed" | "Locked"} 
                 score={test.score}
-                packagePrice={!test.isFree ? PACKAGE_PRICING[mainCategory].price : undefined}
+                packagePrice={!test.isFree && !isCategoryUnlocked ? PACKAGE_PRICING[mainCategory].price : undefined}
                 packageName={PACKAGE_PRICING[mainCategory].name}
                 onStart={() => router.push(`/mock-tests/${test.id}`)}
               />
@@ -253,9 +262,18 @@ export default function MockTestsPage() {
                 ))}
               </ul>
               
-              <button className="w-full bg-white text-orange-600 hover:bg-orange-50 font-bold py-3 px-4 rounded-lg transition-colors shadow-sm">
-                Unlock Now
-              </button>
+              {isCategoryUnlocked ? (
+                <button disabled className="w-full bg-orange-100 text-orange-600 font-bold py-3 px-4 rounded-lg transition-colors shadow-inner opacity-90">
+                  ✓ Premium Unlocked
+                </button>
+              ) : (
+                <RazorpayCheckoutButton 
+                  amount={PACKAGE_PRICING[mainCategory].price}
+                  itemName={PACKAGE_PRICING[mainCategory].name}
+                  buttonText="Unlock Now"
+                  className="w-full bg-white text-orange-600 hover:bg-orange-50 font-bold py-3 px-4 rounded-lg transition-colors shadow-sm disabled:opacity-70"
+                />
+              )}
             </div>
           </div>
 

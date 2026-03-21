@@ -1,4 +1,5 @@
 import { Clock, CheckCircle2, FileText, PlayCircle } from "lucide-react";
+import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 export interface TestCardProps {
   title: string;
@@ -41,21 +42,31 @@ export function TestCard({ title, duration, questions, marks, status, isFree, sc
             <p className="font-bold text-secondary">{score}</p>
           </div>
         )}
-        <button 
-          disabled={isLocked && !packagePrice}
-          onClick={isCompleted ? onAnalysis : onStart}
-          className={`flex items-center justify-center gap-2 h-10 px-6 rounded-lg font-medium text-sm transition-all duration-300 flex-shrink-0 ${
-            isAvailable 
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow shadow-primary/20 hover:scale-105' 
-              : isCompleted 
-                ? 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
-                : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5'
-          }`}
-        >
-          {isAvailable && <><PlayCircle className="w-4 h-4" /> Start Test</>}
-          {isCompleted && "View Analysis"}
-          {isLocked && <>{packagePrice ? `Unlock ${packageName?.split(" ")[0]} Package (₹${packagePrice})` : "Locked"}</>}
-        </button>
+        
+        {isLocked && packagePrice ? (
+          <RazorpayCheckoutButton
+            amount={packagePrice}
+            itemName={packageName || "Premium Package"}
+            buttonText={`Unlock ${packageName?.split(" ")[0]} Package (₹${packagePrice})`}
+            className="flex items-center justify-center gap-2 h-10 px-6 rounded-lg font-medium text-sm transition-all duration-300 flex-shrink-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5"
+          />
+        ) : (
+          <button 
+            disabled={isLocked}
+            onClick={isCompleted ? onAnalysis : onStart}
+            className={`flex items-center justify-center gap-2 h-10 px-6 rounded-lg font-medium text-sm transition-all duration-300 flex-shrink-0 ${
+              isAvailable 
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow shadow-primary/20 hover:scale-105' 
+                : isCompleted 
+                  ? 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5 disabled:opacity-50'
+            }`}
+          >
+            {isAvailable && <><PlayCircle className="w-4 h-4" /> Start Test</>}
+            {isCompleted && "View Analysis"}
+            {isLocked && "Locked"}
+          </button>
+        )}
       </div>
     </div>
   );

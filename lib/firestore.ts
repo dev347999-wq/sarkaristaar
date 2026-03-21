@@ -262,3 +262,34 @@ export const getPracticeQuestions = async (subjectSlug: string, topicSlug: strin
   }
   return [];
 };
+
+// -------------------------------------------------------------
+// Purchases API
+// -------------------------------------------------------------
+
+export interface PurchaseRecord {
+  id?: string;
+  packageId: string; // e.g., "SSC CGL"
+  orderId: string;
+  paymentId: string;
+  amount?: number;
+  date: string;
+}
+
+export const recordPurchase = async (userId: string, packageId: string, paymentDetails: any) => {
+  if (!userId || !packageId) throw new Error("User ID and Package ID are required");
+  const purchaseRef = doc(collection(db, "users", userId, "purchases"));
+  await setDoc(purchaseRef, {
+    packageId,
+    ...paymentDetails,
+    createdAt: Timestamp.now()
+  });
+  return purchaseRef.id;
+};
+
+export const getUserPurchases = async (userId: string): Promise<string[]> => {
+  if (!userId) return [];
+  const purchasesRef = collection(db, "users", userId, "purchases");
+  const querySnapshot = await getDocs(purchasesRef);
+  return querySnapshot.docs.map(doc => doc.data().packageId as string);
+};
