@@ -105,18 +105,25 @@ export function RazorpayCheckoutButton({
             });
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
-              // 4. Save to Firestore explicitly from the Client
-              await recordPurchase(user.uid, itemName, {
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                amount: order.amount,
-                date: new Date().toISOString()
-              });
-
               alert(`Payment Successful! Your package has been unlocked.`);
+              
               if (onPaymentSuccess) {
                 onPaymentSuccess();
               }
+              
+              try {
+                // 4. Save to Firestore explicitly from the Client
+                await recordPurchase(user.uid, itemName, {
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  amount: order.amount,
+                  date: new Date().toISOString()
+                });
+              } catch (dbError) {
+                console.error("Critical: Failed to save purchase to Firestore!", dbError);
+                // The purchase failed to save to the DB, but we already unlocked the UI for this session.
+              }
+
               router.refresh(); 
             } else {
               alert(`Payment verification failed: ${verifyData.error}`);
