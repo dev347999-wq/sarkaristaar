@@ -47,6 +47,7 @@ export function Navbar() {
     { href: "/mock-tests", label: "Mock Tests" },
     { href: "/practice", label: "Practice" },
     { href: "/vocab-grammar", label: "Vocab & Grammar" },
+    { href: "/current-affairs", label: "Current Affairs & GS" },
     { href: "/notes", label: "Notes" },
     { href: "/dashboard", label: "Dashboard" },
   ];
