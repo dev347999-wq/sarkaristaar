@@ -246,41 +246,58 @@ export default function MockTestsPage() {
         
         <div className="space-y-6 sticky top-24 self-start">
           
-          {/* Premium Package Card */}
-          <div className="p-6 rounded-xl relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/20">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" /></svg>
-            </div>
-            <div className="relative z-10">
-              <h3 className="font-bold text-xl mb-1">{PACKAGE_PRICING[mainCategory].name}</h3>
-              <div className="flex items-baseline gap-2 mb-4">
-                <span className="text-3xl font-black">₹{PACKAGE_PRICING[mainCategory].price}</span>
-                <span className="text-sm opacity-80 line-through">₹999</span>
+          {/* Premium Package Card / Welcome Box */}
+          {isCategoryUnlocked ? (
+            <div className="p-6 rounded-xl relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/20 text-center">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
               </div>
-              
-              <ul className="space-y-2 mb-6 text-sm font-medium">
-                {PACKAGE_PRICING[mainCategory].features.map((feature, idx) => (
-                  <li key={idx} className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-amber-200 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              
-              {isCategoryUnlocked ? (
-                <button disabled className="w-full bg-orange-100 text-orange-600 font-bold py-3 px-4 rounded-lg transition-colors shadow-inner opacity-90">
-                  ✓ Premium Unlocked
+              <div className="relative z-10 flex flex-col items-center justify-center py-4">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <h3 className="font-black text-2xl mb-2">Pro Unlocked!</h3>
+                <p className="font-medium text-emerald-50 mb-6">Welcome to the Pro Test Series. You now have unlimited access to all premium mocks.</p>
+                <button disabled className="w-full bg-white/20 text-white font-bold py-3 px-4 rounded-lg backdrop-blur-sm">
+                  Happy Learning!
                 </button>
-              ) : (
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 rounded-xl relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/20">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" /></svg>
+              </div>
+              <div className="relative z-10">
+                <h3 className="font-bold text-xl mb-1">{PACKAGE_PRICING[mainCategory].name}</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-3xl font-black">₹{PACKAGE_PRICING[mainCategory].price}</span>
+                  <span className="text-sm opacity-80 line-through">₹999</span>
+                </div>
+                
+                <ul className="space-y-2 mb-6 text-sm font-medium">
+                  {PACKAGE_PRICING[mainCategory].features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-amber-200 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                
                 <RazorpayCheckoutButton 
                   amount={PACKAGE_PRICING[mainCategory].price}
                   itemName={PACKAGE_PRICING[mainCategory].name}
                   buttonText="Unlock Now"
                   className="w-full bg-white text-orange-600 hover:bg-orange-50 font-bold py-3 px-4 rounded-lg transition-colors shadow-sm disabled:opacity-70"
+                  onPaymentSuccess={() => {
+                    const newSet = new Set(userPurchases);
+                    newSet.add(PACKAGE_PRICING[mainCategory].name);
+                    setUserPurchases(newSet);
+                  }}
                 />
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Exam Pattern Card */}
           <div className="p-6 rounded-xl border border-border bg-card shadow-sm">
