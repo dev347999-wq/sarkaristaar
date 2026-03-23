@@ -14,6 +14,8 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     "SSC CGL Tier 2": "SSC CGL Mains",
     "RRB NTPC CBT 1": "RRB NTPC CBT 1",
     "RRB NTPC CBT 2": "RRB NTPC CBT 2",
+    "Agniveer Army GD": "Agniveer GD",
+    "Agniveer Army Clerk": "Agniveer Clerk",
   };
   
   const displayPrefix = prefixMap[prefixKey] || prefixKey;
@@ -98,7 +100,35 @@ const TEST_CATEGORIES = {
     ],
     totalQs: 120,
     totalMarks: 120,
-    negative: "-0.33 Marks (1/3rd)"
+    negative: "-0.33 Marks (1/3rd)",
+    testCount: 100
+  },
+  "Agniveer Army GD": {
+    config: { duration: "60 Mins", questions: "50", marks: "100", demoScore: "72/100" },
+    pattern: [
+      { subject: "General Knowledge", questions: 15, marks: 30 },
+      { subject: "General Science", questions: 15, marks: 30 },
+      { subject: "Mathematics", questions: 15, marks: 30 },
+      { subject: "Logical Reasoning", questions: 5, marks: 10 },
+    ],
+    totalQs: 50,
+    totalMarks: 100,
+    negative: "-0.50 Marks",
+    testCount: 50
+  },
+  "Agniveer Army Clerk": {
+    config: { duration: "60 Mins", questions: "50", marks: "200", demoScore: "156/200" },
+    pattern: [
+      { subject: "General Science", questions: 5, marks: 20 },
+      { subject: "Mathematics", questions: 10, marks: 40 },
+      { subject: "Computer Science", questions: 5, marks: 20 },
+      { subject: "General Knowledge", questions: 5, marks: 20 },
+      { subject: "General English", questions: 25, marks: 100 },
+    ],
+    totalQs: 50,
+    totalMarks: 200,
+    negative: "-1.00 Marks",
+    testCount: 50
   }
 };
 
@@ -110,12 +140,17 @@ const CATEGORY_STRUCTURE = {
   "RRB NTPC": [
     { label: "CBT 1", key: "RRB NTPC CBT 1" },
     { label: "CBT 2", key: "RRB NTPC CBT 2" }
+  ],
+  "Agniveer": [
+    { label: "Army GD", key: "Agniveer Army GD" },
+    { label: "Army Clerk", key: "Agniveer Army Clerk" }
   ]
 } as const;
 
 const PACKAGE_PRICING = {
   "SSC CGL": { price: 250, name: "SSC CGL Pro (Pre + Mains)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] },
-  "RRB NTPC": { price: 10, name: "RRB NTPC Pro (CBT 1 + CBT 2)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
+  "RRB NTPC": { price: 10, name: "RRB NTPC Pro (CBT 1 + CBT 2)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] },
+  "Agniveer": { price: 149, name: "Agniveer Pro (Army GD + Clerk)", features: ["100+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
 };
 
 type MainCategory = keyof typeof CATEGORY_STRUCTURE;
@@ -166,7 +201,14 @@ export default function MockTestsPage() {
 
   // Memoize generation so it only recalculates when activeCategory, attempts, or uploads change
   const tests = useMemo(
-    () => generateTests(activeCategory, 100, TEST_CATEGORIES[activeCategory].config, userAttemptsMap, uploadedTestIds, isCategoryUnlocked),
+    () => generateTests(
+      activeCategory, 
+      (TEST_CATEGORIES[activeCategory] as any).testCount || 100, 
+      TEST_CATEGORIES[activeCategory].config, 
+      userAttemptsMap, 
+      uploadedTestIds, 
+      isCategoryUnlocked
+    ),
     [activeCategory, userAttemptsMap, uploadedTestIds, isCategoryUnlocked]
   );
   
@@ -219,7 +261,7 @@ export default function MockTestsPage() {
         <div className="md:col-span-2 space-y-6">
           <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border">
             <h2 className="font-bold text-lg">{activeCategory} Tests</h2>
-            <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">100 Tests Available</span>
+            <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">{(TEST_CATEGORIES[activeCategory] as any).testCount || 100} Tests Available</span>
           </div>
           
           <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
