@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import ParticleBackground from "@/components/ParticleBackground";
 import { AuthProvider } from "@/context/AuthContext";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,11 +37,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <ParticleBackground />
-            <Navbar />
-            <main className="flex-1">
-              {children}
-            </main>
+            <LanguageProvider>
+              <ParticleBackground />
+              <Navbar />
+              <main className="flex-1">
+                {children}
+              </main>
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { Star, Menu, X, UserCircle, LogOut, Clock } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { Globe } from "lucide-react";
 
 function NavbarClock() {
   const [time, setTime] = useState<Date | null>(null);
@@ -30,6 +32,7 @@ function NavbarClock() {
 
 export function Navbar() {
   const { user, signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const pathname = usePathname();
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   // Require a logged-in user AND a non-empty admin email to prevent
@@ -43,13 +46,13 @@ export function Navbar() {
   }
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/mock-tests", label: "Mock Tests" },
-    { href: "/practice", label: "Practice" },
-    { href: "/vocab-grammar", label: "Vocab & Grammar" },
-    { href: "/current-affairs", label: "Current Affairs & GS" },
-    { href: "/notes", label: "Notes" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/", label: t("home"), key: "home" },
+    { href: "/mock-tests", label: t("mockTests"), key: "mockTests" },
+    { href: "/practice", label: t("practice"), key: "practice" },
+    { href: "/vocab-grammar", label: t("vocabGrammar", "Vocab"), key: "vocabGrammar" },
+    { href: "/current-affairs", label: t("currentAffairs"), key: "currentAffairs" },
+    { href: "/notes", label: t("notes"), key: "notes" },
+    { href: "/dashboard", label: t("dashboard"), key: "dashboard" },
   ];
   
   return (
@@ -68,7 +71,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center space-x-8">
             {navLinks.map(link => (
               <Link key={link.href} href={link.href} className="text-sm font-medium hover:text-primary transition-colors">
-                {link.label === "Vocab & Grammar" ? (
+                {link.key === "vocabGrammar" ? (
                   <span className="relative">
                     {link.label}
                     <span className="absolute -top-2 -right-3 flex h-3 w-3">
@@ -81,12 +84,34 @@ export function Navbar() {
             ))}
             {isAdmin && (
               <Link href="/admin" className="text-sm font-bold text-amber-500 hover:text-amber-600 transition-colors bg-amber-500/10 px-3 py-1 rounded-full">
-                Admin Area
+                {t("adminArea")}
               </Link>
             )}
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Language Switcher */}
+            <div className="relative group/lang">
+              <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-all">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase">{language}</span>
+              </button>
+              <div className="absolute right-0 top-full pt-1 opacity-0 invisible group-hover/lang:opacity-100 group-hover/lang:visible transition-all duration-200 z-[60]">
+                <div className="w-32 bg-card border border-border rounded-lg shadow-xl overflow-hidden py-1">
+                  {(["en", "hi", "ta"] as const).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => setLanguage(lang)}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between ${language === lang ? "text-primary font-bold bg-primary/5" : "text-muted-foreground"}`}
+                    >
+                      {t(`lang${lang.charAt(0).toUpperCase()}${lang.slice(1)}`)}
+                      {language === lang && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             <NavbarClock />
             <ThemeToggle />
             {user ? (
@@ -106,21 +131,21 @@ export function Navbar() {
                       <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                     <Link href="/dashboard" className="block px-4 py-2 text-sm hover:bg-muted transition-colors">
-                      My Dashboard
+                      {t("myDashboard")}
                     </Link>
                     <button 
                       onClick={() => signOut()}
                       className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" />
-                      Sign Out
+                      {t("signOut")}
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
               <Link href="/login" className="hidden md:inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
-                Login
+                {t("login")}
               </Link>
             )}
             {/* Mobile hamburger */}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, BookMarked, Tag, Languages, SpellCheck, LayoutGrid, ArrowRight, Trash2, HelpCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { getSavedQuestions, deleteSavedQuestion, SavedQuestion, normalizeSubject } from "@/lib/firestore";
 
 // Helper for batching
@@ -16,6 +17,7 @@ const chunkArray = (array: any[], size: number) => {
 
 export default function NotesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,8 +119,8 @@ export default function NotesPage() {
 
       {/* Header */}
       <div className="space-y-4">
-        <h1 className="text-4xl font-black tracking-tight text-foreground bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">Digital Revision Notebook</h1>
-        <p className="text-muted-foreground max-w-2xl font-medium font-hand text-xl">Your automated study notebook. Each A4 sheet concisely groups your saved items in a handwritten style.</p>
+        <h1 className="text-4xl font-black tracking-tight text-foreground bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">{t("digitalNotebook")}</h1>
+        <p className="text-muted-foreground max-w-2xl font-medium font-hand text-xl">{t("notebookSubtitle")}</p>
       </div>
 
       {/* Repository Navigation & Search */}
@@ -128,21 +130,21 @@ export default function NotesPage() {
             active={activeTab === "vocab"} 
             onClick={() => setActiveTab("vocab")} 
             icon={<Languages className="w-4 h-4" />} 
-            label="Vocab Sheets" 
+            label={t("vocabSheets", "Vocab")} 
             count={vocabItems.length}
           />
           <TabButton 
             active={activeTab === "grammar"} 
             onClick={() => setActiveTab("grammar")} 
             icon={<SpellCheck className="w-4 h-4" />} 
-            label="Grammar Sheets" 
+            label={t("grammarSheets", "Grammar")} 
             count={grammarItems.length}
           />
           <TabButton 
             active={activeTab === "subjects"} 
             onClick={() => setActiveTab("subjects")} 
             icon={<LayoutGrid className="w-4 h-4" />} 
-            label="Subject Sheets" 
+            label={t("subjectSheets")} 
             count={otherItems.length}
           />
         </div>
@@ -151,7 +153,7 @@ export default function NotesPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder="Search within notebook..." 
+            placeholder={t("searchPlaceholder")} 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex h-12 w-full rounded-2xl border border-input bg-background pl-11 pr-4 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all shadow-inner"
@@ -208,6 +210,90 @@ function TabButton({ active, onClick, icon, label, count }: any) {
   );
 }
 
+function TranslatedNoteItem({ item, i, isVocab, onDelete }: { item: SavedQuestion, i: number, isVocab: boolean, onDelete: (id: string) => void }) {
+  const { language, translateText } = useLanguage();
+  const [translatedText, setTranslatedText] = useState(item.questionText);
+  const [translatedAnswer, setTranslatedAnswer] = useState(item.correctAnswer);
+  const [translatedExplanation, setTranslatedExplanation] = useState(item.explanation);
+  const [translatedNotes, setTranslatedNotes] = useState(item.userNotes);
+
+  useEffect(() => {
+    if (language === "en") {
+      setTranslatedText(item.questionText);
+      setTranslatedAnswer(item.correctAnswer);
+      setTranslatedExplanation(item.explanation);
+      setTranslatedNotes(item.userNotes);
+      return;
+    }
+
+    const category = isVocab ? "Vocab" : normalizeSubject(item.subject);
+    
+    // Translate question text
+    translateText(item.questionText, category).then(setTranslatedText);
+    
+    // Translate correct answer/meaning
+    if (item.correctAnswer) {
+      translateText(item.correctAnswer, category).then(setTranslatedAnswer);
+    }
+    
+    // Translate explanation
+    if (item.explanation) {
+      translateText(item.explanation, category).then(setTranslatedExplanation);
+    }
+
+    // Translate user notes
+    if (item.userNotes) {
+      translateText(item.userNotes, category).then(setTranslatedNotes);
+    }
+  }, [language, item, isVocab, translateText]);
+
+  return (
+    <div className="relative group/item border-b border-dashed border-border/20 pb-3 last:border-0">
+       <div className="flex justify-between items-start gap-4">
+          <div className="space-y-1 w-full">
+            <h4 className="font-bold text-2xl leading-tight text-[#1a1a1a]">
+              {i + 1}. {translatedText}
+            </h4>
+            
+            {/* Meaning in Blue Pen */}
+            {isVocab && translatedAnswer && (
+               <p className="text-xl ink-blue leading-snug">
+                 <span className="underline decoration-blue-500/20 font-bold">Meaning</span>: {translatedAnswer}
+               </p>
+            )}
+
+            {/* Explanation in Blue Pen */}
+            {translatedExplanation && (
+               <p className="text-lg ink-blue leading-tight opacity-90 italic">
+                 {translatedExplanation}
+               </p>
+            )}
+
+            {/* Rule Detail if applicable (Grammar) */}
+            {!isVocab && translatedAnswer && translatedAnswer !== translatedExplanation && (
+               <p className="text-lg ink-blue leading-snug">
+                 <span className="font-bold">Rule</span>: {translatedAnswer}
+               </p>
+            )}
+
+            {/* User Notes/P.S. in Blue Pen */}
+            {translatedNotes && (
+               <p className="text-md ink-blue border-l-2 border-blue-200/50 pl-2 opacity-70 italic mt-1">
+                 * {translatedNotes}
+               </p>
+            )}
+          </div>
+          <button 
+            onClick={() => onDelete(item.questionId)} 
+            className="p-1 px-2 hover:bg-destructive/10 text-destructive/40 hover:text-destructive rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+       </div>
+    </div>
+  );
+}
+
 function A4Page({ items, pageIndex, onDelete, type }: { items: SavedQuestion[], pageIndex: number, onDelete: (id: string) => void, type: string }) {
   const isVocab = type === "vocab";
   
@@ -228,49 +314,13 @@ function A4Page({ items, pageIndex, onDelete, type }: { items: SavedQuestion[], 
         {/* Items List */}
         <div className="space-y-4 flex-1">
           {items.map((item, i) => (
-            <div key={item.questionId} className="relative group/item border-b border-dashed border-border/20 pb-3 last:border-0">
-               <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-1 w-full">
-                    <h4 className="font-bold text-2xl leading-tight text-[#1a1a1a]">
-                      {i + 1}. {item.questionText}
-                    </h4>
-                    
-                    {/* Meaning in Blue Pen */}
-                    {isVocab && item.correctAnswer && (
-                       <p className="text-xl ink-blue leading-snug">
-                         <span className="underline decoration-blue-500/20 font-bold">Meaning</span>: {item.correctAnswer}
-                       </p>
-                    )}
-
-                    {/* Explanation in Blue Pen */}
-                    {item.explanation && (
-                       <p className="text-lg ink-blue leading-tight opacity-90 italic">
-                         {item.explanation}
-                       </p>
-                    )}
-
-                    {/* Rule Detail if applicable (Grammar) */}
-                    {!isVocab && item.correctAnswer && item.correctAnswer !== item.explanation && (
-                       <p className="text-lg ink-blue leading-snug">
-                         <span className="font-bold">Rule</span>: {item.correctAnswer}
-                       </p>
-                    )}
-
-                    {/* User Notes/P.S. in Blue Pen */}
-                    {item.userNotes && (
-                       <p className="text-md ink-blue border-l-2 border-blue-200/50 pl-2 opacity-70 italic mt-1">
-                         * {item.userNotes}
-                       </p>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => onDelete(item.questionId)} 
-                    className="p-1 px-2 hover:bg-destructive/10 text-destructive/40 hover:text-destructive rounded-lg transition-all opacity-0 group-hover/item:opacity-100 flex-shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-               </div>
-            </div>
+            <TranslatedNoteItem 
+              key={item.questionId} 
+              item={item} 
+              i={i} 
+              isVocab={isVocab} 
+              onDelete={onDelete} 
+            />
           ))}
         </div>
 
