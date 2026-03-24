@@ -39,6 +39,8 @@ export function Navbar() {
   // undefined === undefined from incorrectly returning true.
   const isAdmin = !!user && !!adminEmail && user.email === adminEmail;
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [langMobileOpen, setLangMobileOpen] = useState(false);
   
   // Hide Navbar when taking a test or viewing full screen analysis
   if (pathname?.startsWith('/mock-tests/') && pathname !== '/mock-tests') {
@@ -90,26 +92,31 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Language Switcher */}
+            {/* Language Switcher Desktop */}
             <div className="relative group/lang">
-              <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-all">
+              <button 
+                onClick={() => setLangOpen(!langOpen)}
+                className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-muted border border-transparent hover:border-border transition-all"
+              >
                 <Globe className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-bold uppercase">{language}</span>
               </button>
-              <div className="absolute right-0 top-full pt-1 opacity-0 invisible group-hover/lang:opacity-100 group-hover/lang:visible transition-all duration-200 z-[60]">
-                <div className="w-32 bg-card border border-border rounded-lg shadow-xl overflow-hidden py-1">
-                  {(["en", "hi", "ta"] as const).map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => setLanguage(lang)}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between ${language === lang ? "text-primary font-bold bg-primary/5" : "text-muted-foreground"}`}
-                    >
-                      {t(`lang${lang.charAt(0).toUpperCase()}${lang.slice(1)}`)}
-                      {language === lang && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                    </button>
-                  ))}
+              {langOpen && (
+                <div className="absolute right-0 top-full pt-1 z-[60]">
+                  <div className="w-32 bg-card border border-border rounded-lg shadow-xl overflow-hidden py-1">
+                    {(["en", "hi", "ta"] as const).map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => { setLanguage(lang); setLangOpen(false); }}
+                        className={`w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center justify-between ${language === lang ? "text-primary font-bold bg-primary/5" : "text-muted-foreground"}`}
+                      >
+                        {t(`lang${lang.charAt(0).toUpperCase()}${lang.slice(1)}`)}
+                        {language === lang && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             
             <NavbarClock />
@@ -183,6 +190,33 @@ export function Navbar() {
                 Admin Area
               </Link>
             )}
+            
+            {/* Mobile Language Switcher */}
+            <div className="pt-2">
+              <button 
+                onClick={() => setLangMobileOpen(!langMobileOpen)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <span>{t(`lang${language.charAt(0).toUpperCase()}${language.slice(1)}`)}</span>
+                </div>
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">Change</span>
+              </button>
+              {langMobileOpen && (
+                <div className="mt-1 ml-9 grid grid-cols-2 gap-2 pb-2">
+                  {(["en", "hi", "ta"] as const).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => { setLanguage(lang); setLangMobileOpen(false); setMobileOpen(false); }}
+                      className={`text-left px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${language === lang ? "bg-primary/5 border-primary text-primary" : "border-border text-muted-foreground"}`}
+                    >
+                      {t(`lang${lang.charAt(0).toUpperCase()}${lang.slice(1)}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Mobile User Section */}
