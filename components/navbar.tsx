@@ -100,7 +100,7 @@ export function Navbar() {
               {langOpen && (
                 <div className="absolute right-0 top-full pt-1 z-[60]">
                   <div className="w-32 bg-card border border-border rounded-lg shadow-xl overflow-hidden py-1">
-                    {(["en", "hi", "ta"] as const).map((lang) => (
+                    {(["en", "hi"] as const).map((lang) => (
                       <button
                         key={lang}
                         onClick={() => { setLanguage(lang); setLangOpen(false); }}
@@ -201,7 +201,7 @@ export function Navbar() {
               </button>
               {langMobileOpen && (
                 <div className="mt-1 ml-9 grid grid-cols-2 gap-2 pb-2">
-                  {(["en", "hi", "ta"] as const).map((lang) => (
+                  {(["en", "hi"] as const).map((lang) => (
                     <button
                       key={lang}
                       onClick={() => { setLanguage(lang); setLangMobileOpen(false); setMobileOpen(false); }}

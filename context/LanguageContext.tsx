@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-type Language = "en" | "hi" | "ta";
+type Language = "en" | "hi";
 
 interface LanguageContextType {
   language: Language;
@@ -66,33 +66,6 @@ const translations: Record<Language, Record<string, string>> = {
     currentAffairsDesc: "दैनिक करेंट अफेयर्स और व्यापक GS सामग्री के साथ अपडेट रहें।",
     notesDesc: "अपनी स्वचालित डिजिटल रिवीजन नोटबुक को कभी भी, कहीं भी एक्सेस करें।",
   },
-  ta: {
-    home: "முகப்பு",
-    mockTests: "மாதிரி தேர்வுகள்",
-    practice: "பயிற்சி",
-    vocabGrammar: "சொல்லகராதி மற்றும் இலக்கணம்",
-    currentAffairs: "நடப்பு நிகழ்வுகள் மற்றும் GS",
-    notes: "குறிப்புகள்",
-    dashboard: "டாஷ்போர்டு",
-    adminArea: "நிர்வாகப் பகுதி",
-    login: "உள்நுழை",
-    signOut: "வெளியேறு",
-    myProfile: "எனது சுயவிவரம்",
-    myDashboard: "எனது டாஷ்போர்டு",
-    searchPlaceholder: "குறிப்பேட்டில் தேடுங்கள்...",
-    digitalNotebook: "டிஜிட்டல் திருப்புதல் குறிப்பேடு",
-    notebookSubtitle: "உங்கள் தானியங்கி ஆய்வு குறிப்பேடு.",
-    vocabSheets: "சொல்லகராதி தாள்கள்",
-    grammarSheets: "இலக்கண தாள்கள்",
-    subjectSheets: "பாடத் தாள்கள்",
-    langEn: "English",
-    langHi: "हिन्दी",
-    langTa: "தமிழ்",
-    mockTestsDesc: "எங்கள் முழு நீள மாதிரி தேர்வுகள் மூலம் உண்மையான தேர்வு சூழலை உருவகப்படுத்துங்கள்.",
-    practiceDesc: "குறிப்பிடப்பட்ட கேள்வி வங்கிகளுடன் கணிதம், தர்க்கம், ஆங்கிலம் அல்லது பொது விழிப்புணர்வு ஆகியவற்றில் கவனம் செலுத்துங்கள்.",
-    currentAffairsDesc: "தினசரி நடப்பு நிகழ்வுகள் மற்றும் விரிவான பொது ஆய்வுகள் பொருட்களுடன் புதுப்பித்த நிலையில் இருங்கள்.",
-    notesDesc: "உங்கள் தானியங்கி டிஜிட்டல் திருப்புதல் குறிப்பேட்டை எப்போது வேண்டுமானாலும், எங்கும் அணுகலாம்.",
-  },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -103,7 +76,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Load from localStorage if available
   useEffect(() => {
     const saved = localStorage.getItem("preferredLanguage") as Language;
-    if (saved && ["en", "hi", "ta"].includes(saved)) {
+    if (saved && ["en", "hi"].includes(saved)) {
       setLanguage(saved);
     }
   }, []);
