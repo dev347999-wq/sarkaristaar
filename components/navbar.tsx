@@ -48,11 +48,7 @@ export function Navbar() {
   }
 
   const navLinks = [
-    { href: "/", label: t("home"), key: "home" },
-    { href: "/mock-tests", label: t("mockTests"), key: "mockTests" },
-    { href: "/practice", label: t("practice"), key: "practice" },
     { href: "/vocab-grammar", label: t("vocabGrammar", "Vocab"), key: "vocabGrammar" },
-    { href: "/current-affairs", label: t("currentAffairs"), key: "currentAffairs" },
     { href: "/notes", label: t("notes"), key: "notes" },
     { href: "/dashboard", label: t("dashboard"), key: "dashboard" },
   ];

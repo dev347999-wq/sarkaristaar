@@ -34,7 +34,10 @@ const translations: Record<Language, Record<string, string>> = {
     langEn: "English",
     langHi: "हिन्दी",
     langTa: "தமிழ்",
-    // Add more as needed
+    mockTestsDesc: "Simulate the real exam environment with our full-length mock tests.",
+    practiceDesc: "Focus on Quant, Reasoning, English, or GA with targeted question banks.",
+    currentAffairsDesc: "Stay updated with daily current affairs and comprehensive GS materials.",
+    notesDesc: "Access your automated digital revision notebook anytime, anywhere.",
   },
   hi: {
     home: "होम",
@@ -58,6 +61,10 @@ const translations: Record<Language, Record<string, string>> = {
     langEn: "English",
     langHi: "हिन्दी",
     langTa: "தமிழ்",
+    mockTestsDesc: "हमारे पूर्ण-लंबाई वाले मॉक टेस्ट के साथ वास्तविक परीक्षा वातावरण का अनुभव करें।",
+    practiceDesc: "लक्षित प्रश्न बैंकों के साथ क्वांट, रीजनिंग, अंग्रेजी या GA पर ध्यान केंद्रित करें।",
+    currentAffairsDesc: "दैनिक करेंट अफेयर्स और व्यापक GS सामग्री के साथ अपडेट रहें।",
+    notesDesc: "अपनी स्वचालित डिजिटल रिवीजन नोटबुक को कभी भी, कहीं भी एक्सेस करें।",
   },
   ta: {
     home: "முகப்பு",
@@ -81,6 +88,10 @@ const translations: Record<Language, Record<string, string>> = {
     langEn: "English",
     langHi: "हिन्दी",
     langTa: "தமிழ்",
+    mockTestsDesc: "எங்கள் முழு நீள மாதிரி தேர்வுகள் மூலம் உண்மையான தேர்வு சூழலை உருவகப்படுத்துங்கள்.",
+    practiceDesc: "குறிப்பிடப்பட்ட கேள்வி வங்கிகளுடன் கணிதம், தர்க்கம், ஆங்கிலம் அல்லது பொது விழிப்புணர்வு ஆகியவற்றில் கவனம் செலுத்துங்கள்.",
+    currentAffairsDesc: "தினசரி நடப்பு நிகழ்வுகள் மற்றும் விரிவான பொது ஆய்வுகள் பொருட்களுடன் புதுப்பித்த நிலையில் இருங்கள்.",
+    notesDesc: "உங்கள் தானியங்கி டிஜிட்டல் திருப்புதல் குறிப்பேட்டை எப்போது வேண்டுமானாலும், எங்கும் அணுகலாம்.",
   },
 };
 
