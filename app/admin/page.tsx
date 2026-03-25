@@ -52,6 +52,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error" | "locking">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [processStep, setProcessStep] = useState("");
+  const [uploadLanguage, setUploadLanguage] = useState<"english" | "hindi" | "bilingual">("english");
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
@@ -195,23 +196,29 @@ export default function AdminPage() {
 
         return {
           id: row.id || row._id || "",
-          question: row.question,
-          question_hindi: row.question_hindi || row['question hindi'] || "",
-          options: optionsArray,
-          options_hindi: optionsHindiArray,
-          answer: row.answer || "",
-          answer_hindi: row.answer_hindi || row['answer hindi'] || "",
+          question: uploadLanguage === "hindi" ? "" : row.question,
+          question_hindi: uploadLanguage === "english" ? "" : (row.question_hindi || row['question hindi'] || (uploadLanguage === "hindi" ? row.question : "")),
+          options: uploadLanguage === "hindi" ? ["","","",""] : optionsArray,
+          options_hindi: uploadLanguage === "english" ? ["","","",""] : (optionsHindiArray.some(o => o) ? optionsHindiArray : (uploadLanguage === "hindi" ? optionsArray : ["","","",""])),
+          answer: uploadLanguage === "hindi" ? "" : row.answer || "",
+          answer_hindi: uploadLanguage === "english" ? "" : (row.answer_hindi || row['answer hindi'] || (uploadLanguage === "hindi" ? row.answer : "")),
           topic: row.topic || "",
-          explanation: row.explanation || "",
-          explanation_hindi: row.explanation_hindi || row['explanation hindi'] || ""
+          explanation: uploadLanguage === "hindi" ? "" : row.explanation || "",
+          explanation_hindi: uploadLanguage === "english" ? "" : (row.explanation_hindi || row['explanation hindi'] || (uploadLanguage === "hindi" ? row.explanation : ""))
         };
       });
 
       const prefixMap: Record<string, string> = {
         "SSC CGL Tier 1": "SSC CGL Tier 1",
         "SSC CGL Tier 2": "SSC CGL Tier 2",
+        "SSC Previous 2025": "SSC Previous 2025",
+        "SSC Previous 2024": "SSC Previous 2024",
+        "SSC Previous 2023": "SSC Previous 2023",
         "RRB NTPC CBT 1": "RRB NTPC CBT 1",
         "RRB NTPC CBT 2": "RRB NTPC CBT 2",
+        "RRB Previous 2025": "RRB Previous 2025",
+        "RRB Previous 2024": "RRB Previous 2024",
+        "RRB Previous 2023": "RRB Previous 2023",
       };
 
       const testId = `${prefixMap[selectedCategory]}-Mock-${testNumber}`;
@@ -581,10 +588,51 @@ export default function AdminPage() {
                     placeholder="https://docs.google.com/spreadsheets/d/1abc.../edit?usp=sharing"
                     className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
-                  <p className="text-xs text-muted-foreground">Make sure the Google Sheet access is set to "Anyone with the link can view". The headers should be: question, option1, option2, option3, option4, answer, explanation (optional).</p>
+                  <p className="text-xs text-muted-foreground">Make sure the Google Sheet access is set to "Anyone with the link can view". The headers should be standard (question, option1, answer, etc.) or bilingual-ready if that format is chosen.</p>
                 </div>
               </div>
             )}
+
+            <div className="bg-muted/30 p-4 rounded-lg border border-border space-y-3">
+               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File Language Content</label>
+               <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="uploadLang" 
+                      checked={uploadLanguage === 'english'} 
+                      onChange={() => setUploadLanguage('english')}
+                      className="w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium group-hover:text-primary transition-colors">English Only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="uploadLang" 
+                      checked={uploadLanguage === 'hindi'} 
+                      onChange={() => setUploadLanguage('hindi')}
+                      className="w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium group-hover:text-primary transition-colors">Hindi Only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input 
+                      type="radio" 
+                      name="uploadLang" 
+                      checked={uploadLanguage === 'bilingual'} 
+                      onChange={() => setUploadLanguage('bilingual')}
+                      className="w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium group-hover:text-primary transition-colors">Bilingual (Mixed)</span>
+                  </label>
+               </div>
+               <p className="text-[10px] text-muted-foreground italic">
+                 {uploadLanguage === 'hindi' ? "Note: Using 'Hindi Only' will map the 'question' column in your file to Hindi fields." : 
+                  uploadLanguage === 'english' ? "Note: Questions will only show for learners choosing English." : 
+                  "Note: Your file must contain both English and Hindi columns (e.g. question, question_hindi)."}
+               </p>
+            </div>
 
             {uploadMode === "csv-file" && (
               <div className="space-y-4 animate-in fade-in duration-300">
