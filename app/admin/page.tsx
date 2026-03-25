@@ -392,12 +392,16 @@ export default function AdminPage() {
         const questionImage =
           findExact(row, 'question(image)') ||
           findExact(row, 'question image') ||
+          findExact(row, 'q10') ||
+          findExact(row, 'image') ||
+          findExact(row, 'img') ||
           findValue(row, ['question', 'image']);
         const answerImage =
           findExact(row, 'answer(image)') ||
           findExact(row, 'answer image') ||
           findExact(row, 'solution(image)') ||
           findExact(row, 'solution image') ||
+          findExact(row, 'solution') ||
           findValue(row, ['answer', 'image']) ||
           findValue(row, ['solution', 'image']);
 

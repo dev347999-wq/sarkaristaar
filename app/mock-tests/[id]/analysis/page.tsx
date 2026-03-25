@@ -228,10 +228,10 @@ export default function TestAnalysis() {
             <div className="space-y-3">
               {(attempt.language === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
                 const currentLetter = ["A", "B", "C", "D"][i];
-                const uAnswerLetter = answers[currentQIndex]; // Now a letter like "A"
+                const uAnswerLetter = answers[currentQIndex]; 
                 const isSelected = uAnswerLetter === currentLetter;
-                // Correct answer is also a letter like "A"
-                const correctLetter = (currentQ.answer || "").trim().toUpperCase();
+                // Safe access to answer
+                const correctLetter = (currentQ?.answer || "").trim().toUpperCase();
                 const isCorrectOption = currentLetter === correctLetter;
                 
                 let btnStyle = "bg-muted/30 border-transparent opacity-60";
@@ -302,7 +302,8 @@ export default function TestAnalysis() {
             {questions.map((_: any, i: number) => {
               const uAnswerLetter = answers[i];
               const isAttempted = !!uAnswerLetter;
-              const correctLetter = questions[i].answer.trim().toUpperCase();
+              const qData = questions[i] || {};
+              const correctLetter = (qData.answer || "").trim().toUpperCase();
               const isCorrect = isAttempted && uAnswerLetter === correctLetter;
               
               let style = "";
