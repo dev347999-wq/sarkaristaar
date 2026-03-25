@@ -5,9 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Upload, FileJson, AlertCircle, CheckCircle2, Link as LinkIcon, FileSpreadsheet, Lock, Unlock, Search } from "lucide-react";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/lib/firebase";
 import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions } from "@/lib/firestore";
 import Papa from "papaparse";
+import ExcelJS from "exceljs";
 
 const CATEGORIES = [
   "SSC CGL Tier 1",
@@ -145,24 +147,99 @@ export default function AdminPage() {
         parsedData = parseResult.data;
       }
       else if (uploadMode === "csv-file") {
-        setProcessStep("Reading CSV file...");
-        if (!csvFile) throw new Error("Please select a CSV file to upload.");
+        setProcessStep("Reading Spreadsheet file...");
+        if (!csvFile) throw new Error("Please select a CSV or Excel file to upload.");
         
-        // Use Papa's native File parsing for better browser compatibility
-        parsedData = await new Promise((resolve, reject) => {
-          Papa.parse(csvFile, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: (h) => h.trim().toLowerCase(),
-            complete: (results) => {
-              if (results.errors.length > 0) {
-                console.warn("CSV File Parsing Warnings:", results.errors);
-              }
-              resolve(results.data);
-            },
-            error: (error) => reject(new Error(error.message))
+        const isExcel = csvFile.name.endsWith(".xlsx") || csvFile.name.endsWith(".xls");
+
+        if (isExcel) {
+          setProcessStep("Parsing Excel file and Extracting Images...");
+          const workbook = new ExcelJS.Workbook();
+          const arrayBuffer = await csvFile.arrayBuffer();
+          await workbook.xlsx.load(arrayBuffer);
+          const worksheet = workbook.getWorksheet(1); // Get first sheet
+          if (!worksheet) throw new Error("Sheet not found in Excel file.");
+
+          // 1. Extract Images and their positions
+          const imageMap: Record<string, string[]> = {}; // "row-col" -> [base64, ...]
+          const images = worksheet.getImages();
+          
+          setProcessStep(`Uploading ${images.length} images to Firebase...`);
+          
+          for (const img of images) {
+            const image = workbook.getImage(Number(img.imageId));
+            if (!image || !img.range) continue;
+            
+            // Convert buffer/base64 to Blob
+            let blob: Blob;
+            if (image.buffer) {
+               blob = new Blob([image.buffer], { type: (image.extension === 'png' ? 'image/png' : 'image/jpeg') });
+            } else if (image.base64) {
+               const byteCharacters = atob(image.base64);
+               const byteNumbers = new Array(byteCharacters.length);
+               for (let i = 0; i < byteCharacters.length; i++) {
+                 byteNumbers[i] = byteCharacters.charCodeAt(i);
+               }
+               blob = new Blob([new Uint8Array(byteNumbers)], { type: (image.extension === 'png' ? 'image/png' : 'image/jpeg') });
+            } else continue;
+
+            // Upload to Firebase Storage
+            const fileRef = ref(storage, `test-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${image.extension}`);
+            await uploadBytes(fileRef, blob);
+            const downloadUrl = await getDownloadURL(fileRef);
+
+            // Map to cell (1-indexed for row/col)
+            const rowIdx = Math.floor(img.range.tl.row) + 1;
+            const colIdx = Math.floor(img.range.tl.col) + 1;
+            const cellKey = `${rowIdx}-${colIdx}`;
+            
+            if (!imageMap[cellKey]) imageMap[cellKey] = [];
+            imageMap[cellKey].push(downloadUrl);
+          }
+
+          // 2. Extract Data from rows
+          const rows: any[] = [];
+          const headerRow = worksheet.getRow(1);
+          const headers: string[] = [];
+          headerRow.eachCell((cell, colNumber) => {
+            headers[colNumber] = String(cell.value || "").trim().toLowerCase();
           });
-        });
+
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return; // Skip header
+            const rowData: any = {};
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+              const header = headers[colNumber];
+              if (header) {
+                // If it's an image-potential cell, check the map
+                const cellImages = imageMap[`${rowNumber}-${colNumber}`];
+                if (cellImages && cellImages.length > 0) {
+                  rowData[header] = cellImages[0]; // Take first image URL
+                } else {
+                  rowData[header] = cell.value;
+                }
+              }
+            });
+            rows.push(rowData);
+          });
+          parsedData = rows;
+        } else {
+          // Standard CSV parser
+          parsedData = await new Promise((resolve, reject) => {
+            Papa.parse(csvFile, {
+              header: true,
+              skipEmptyLines: true,
+              transformHeader: (h) => h.trim().toLowerCase(),
+              complete: (results) => {
+                if (results.errors.length > 0) {
+                  console.warn("CSV File Parsing Warnings:", results.errors);
+                }
+                resolve(results.data);
+              },
+              error: (error) => reject(new Error(error.message))
+            });
+          });
+        }
       }
 
       if (!parsedData || parsedData.length === 0) {
@@ -213,6 +290,10 @@ export default function AdminPage() {
         const answerHindi = findValue(row, ['correct', 'hi']) || findValue(row, ['correct', 'hindi']) || findValue(row, ['answer', 'hi']) || findValue(row, ['answer', 'hindi']);
         const explanationHindi = findValue(row, ['solution', 'hi']) || findValue(row, ['solution', 'hindi']) || findValue(row, ['explanation', 'hi']) || findValue(row, ['explanation', 'hindi']);
 
+        // Images (Fuzzy Match for Question Image and Answer Image)
+        const questionImage = findValue(row, ['question', 'image']);
+        const answerImage = findValue(row, ['answer', 'image']) || findValue(row, ['solution', 'image']);
+
         return {
           id: row.id || row._id || row['questions id'] || "",
           question: uploadLanguage === "hindi" ? "" : (question || ""),
@@ -223,7 +304,9 @@ export default function AdminPage() {
           answer_hindi: uploadLanguage === "english" ? "" : (answerHindi || (uploadLanguage === "hindi" ? answer : "")),
           topic: row.topic || row.subject || "",
           explanation: uploadLanguage === "hindi" ? "" : (explanation || ""),
-          explanation_hindi: uploadLanguage === "english" ? "" : (explanationHindi || (uploadLanguage === "hindi" ? explanation : ""))
+          explanation_hindi: uploadLanguage === "english" ? "" : (explanationHindi || (uploadLanguage === "hindi" ? explanation : "")),
+          imageUrl: questionImage || "",
+          solutionImageUrl: answerImage || ""
         };
       });
 
@@ -662,7 +745,7 @@ export default function AdminPage() {
                   <label className="text-sm font-semibold">Upload CSV File</label>
                   <input
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setCsvFile(e.target.files[0]);

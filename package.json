@@ -12,6 +12,7 @@
     "@tsparticles/react": "^3.0.0",
     "@types/papaparse": "^5.5.2",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "firebase": "^12.10.0",
     "framer-motion": "^12.36.0",
     "lucide-react": "^0.577.0",
@@ -23,7 +24,8 @@
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "tsparticles": "^3.9.1"
+    "tsparticles": "^3.9.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

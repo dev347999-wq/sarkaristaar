@@ -199,6 +199,13 @@ export default function TestAnalysis() {
               {attempt.language === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
             </p>
 
+            {currentQ.imageUrl && (
+              <div className="mb-8 rounded-xl overflow-hidden border border-border bg-muted/30 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={currentQ.imageUrl} alt="Question figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
+              </div>
+            )}
+
             <div className="space-y-3">
               {(attempt.language === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
                 const uAnswer = answers[currentQIndex];
@@ -229,9 +236,17 @@ export default function TestAnalysis() {
             </div>
             
             <div className="mt-8 p-5 bg-primary/5 border border-primary/20 rounded-xl leading-relaxed text-slate-800 dark:text-slate-200">
-              <div className="flex items-center gap-2 font-bold text-primary mb-3 text-lg">
+              <div className="flex items-center gap-2 font-bold text-primary mb-3 text-lg border-b border-primary/10 pb-2">
                 <CheckCircle2 className="w-5 h-5" /> Detailed Explanation
               </div>
+              
+              {currentQ.solutionImageUrl && (
+                <div className="mb-4 rounded-lg overflow-hidden border border-primary/10 bg-white dark:bg-slate-900 p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={currentQ.solutionImageUrl} alt="Solution figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
+                </div>
+              )}
+
               <p className="text-sm font-medium whitespace-pre-wrap">
                  {(attempt.language === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) || "No explanation provided."}
               </p>
