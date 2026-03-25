@@ -423,7 +423,7 @@ export default function AdminPage() {
           findExact(row, 'answer image') ||
           findExact(row, 'solution(image)') ||
           findExact(row, 'solution image') ||
-          findExact(row, 'solution') ||
+          findExact(row, 'solution_image') ||
           findValue(row, ['answer', 'image']) ||
           findValue(row, ['solution', 'image']);
 
