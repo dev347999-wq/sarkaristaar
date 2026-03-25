@@ -8,12 +8,18 @@ import { getUserTestAttempts, getUploadedTestsMetadata, getUserPurchases, TestAt
 import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 // Generator for mock tests
-const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestIds: Set<string>, isCategoryUnlocked: boolean) => {
+const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestsMetadata: Map<string, {isLocked: boolean, paperName?: string}>, isCategoryUnlocked: boolean) => {
   const prefixMap: Record<string, string> = {
     "SSC CGL Tier 1": "SSC CGL Pre",
     "SSC CGL Tier 2": "SSC CGL Mains",
+    "SSC Previous 2025": "SSC 2025 PYP",
+    "SSC Previous 2024": "SSC 2024 PYP",
+    "SSC Previous 2023": "SSC 2023 PYP",
     "RRB NTPC CBT 1": "RRB NTPC CBT 1",
     "RRB NTPC CBT 2": "RRB NTPC CBT 2",
+    "RRB Previous 2025": "RRB 2025 PYP",
+    "RRB Previous 2024": "RRB 2024 PYP",
+    "RRB Previous 2023": "RRB 2023 PYP",
     "Agniveer Army GD": "Agniveer GD",
     "Agniveer Army Clerk": "Agniveer Clerk",
   };
@@ -22,9 +28,10 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
 
   return Array.from({ length: count }, (_, i) => {
     const testId = `${prefixKey}-Mock-${i + 1}`;
-    const title = `${displayPrefix} Full Mock - ${String(i + 1).padStart(2, '0')}`;
+    const testMeta = uploadedTestsMetadata.get(testId);
+    const isUploaded = !!testMeta;
+    const title = testMeta?.paperName || `${prefixMap[prefixKey] || prefixKey} Full Mock - ${String(i + 1).padStart(2, '0')}`;
     const attempt = userAttempts[testId];
-    const isUploaded = uploadedTestIds.has(testId);
     
     // First 3 tests are free.
     const isFree = i < 3;
@@ -129,17 +136,92 @@ const TEST_CATEGORIES = {
     totalMarks: 200,
     negative: "-1.00 Marks",
     testCount: 50
+  },
+  "SSC Previous 2025": {
+    config: { duration: "60 Mins", questions: "100", marks: "200", demoScore: "142.5/200" },
+    pattern: [
+      { subject: "General Intelligence", questions: 25, marks: 50 },
+      { subject: "General Awareness", questions: 25, marks: 50 },
+      { subject: "Quantitative Aptitude", questions: 25, marks: 50 },
+      { subject: "English Comprehension", questions: 25, marks: 50 },
+    ],
+    totalQs: 100,
+    totalMarks: 200,
+    negative: "-0.50 Marks"
+  },
+  "SSC Previous 2024": {
+    config: { duration: "60 Mins", questions: "100", marks: "200", demoScore: "142.5/200" },
+    pattern: [
+      { subject: "General Intelligence", questions: 25, marks: 50 },
+      { subject: "General Awareness", questions: 25, marks: 50 },
+      { subject: "Quantitative Aptitude", questions: 25, marks: 50 },
+      { subject: "English Comprehension", questions: 25, marks: 50 },
+    ],
+    totalQs: 100,
+    totalMarks: 200,
+    negative: "-0.50 Marks"
+  },
+  "SSC Previous 2023": {
+    config: { duration: "60 Mins", questions: "100", marks: "200", demoScore: "142.5/200" },
+    pattern: [
+      { subject: "General Intelligence", questions: 25, marks: 50 },
+      { subject: "General Awareness", questions: 25, marks: 50 },
+      { subject: "Quantitative Aptitude", questions: 25, marks: 50 },
+      { subject: "English Comprehension", questions: 25, marks: 50 },
+    ],
+    totalQs: 100,
+    totalMarks: 200,
+    negative: "-0.50 Marks"
+  },
+  "RRB Previous 2025": {
+    config: { duration: "90 Mins", questions: "100", marks: "100", demoScore: "78.3/100" },
+    pattern: [
+      { subject: "General Awareness", questions: 40, marks: 40 },
+      { subject: "Mathematics", questions: 30, marks: 30 },
+      { subject: "General Intelligence & Reasoning", questions: 30, marks: 30 },
+    ],
+    totalQs: 100,
+    totalMarks: 100,
+    negative: "-0.33 Marks (1/3rd)"
+  },
+  "RRB Previous 2024": {
+    config: { duration: "90 Mins", questions: "100", marks: "100", demoScore: "78.3/100" },
+    pattern: [
+      { subject: "General Awareness", questions: 40, marks: 40 },
+      { subject: "Mathematics", questions: 30, marks: 30 },
+      { subject: "General Intelligence & Reasoning", questions: 30, marks: 30 },
+    ],
+    totalQs: 100,
+    totalMarks: 100,
+    negative: "-0.33 Marks (1/3rd)"
+  },
+  "RRB Previous 2023": {
+    config: { duration: "90 Mins", questions: "100", marks: "100", demoScore: "78.3/100" },
+    pattern: [
+      { subject: "General Awareness", questions: 40, marks: 40 },
+      { subject: "Mathematics", questions: 30, marks: 30 },
+      { subject: "General Intelligence & Reasoning", questions: 30, marks: 30 },
+    ],
+    totalQs: 100,
+    totalMarks: 100,
+    negative: "-0.33 Marks (1/3rd)"
   }
 };
 
 const CATEGORY_STRUCTURE = {
   "SSC CGL": [
     { label: "Tier 1 (Pre)", key: "SSC CGL Tier 1" },
-    { label: "Tier 2 (Mains)", key: "SSC CGL Tier 2" }
+    { label: "Tier 2 (Mains)", key: "SSC CGL Tier 2" },
+    { label: "Prev. 2025", key: "SSC Previous 2025" },
+    { label: "Prev. 2024", key: "SSC Previous 2024" },
+    { label: "Prev. 2023", key: "SSC Previous 2023" }
   ],
   "RRB NTPC": [
     { label: "CBT 1", key: "RRB NTPC CBT 1" },
-    { label: "CBT 2", key: "RRB NTPC CBT 2" }
+    { label: "CBT 2", key: "RRB NTPC CBT 2" },
+    { label: "Prev. 2025", key: "RRB Previous 2025" },
+    { label: "Prev. 2024", key: "RRB Previous 2024" },
+    { label: "Prev. 2023", key: "RRB Previous 2023" }
   ],
   "Agniveer": [
     { label: "Army GD", key: "Agniveer Army GD" },
@@ -162,14 +244,17 @@ export default function MockTestsPage() {
   const [mainCategory, setMainCategory] = useState<MainCategory>("SSC CGL");
   const [activeCategory, setActiveCategory] = useState<Category>("SSC CGL Tier 1");
   const [userAttemptsMap, setUserAttemptsMap] = useState<Record<string, TestAttempt>>({});
-  const [uploadedTestIds, setUploadedTestIds] = useState<Set<string>>(new Set());
+  const [uploadedTestsMetadata, setUploadedTestsMetadata] = useState<Map<string, {isLocked: boolean, paperName?: string}>>(new Map());
   const [userPurchases, setUserPurchases] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // 1. Fetch which tests actually exist in the database and are UNLOCKED
     getUploadedTestsMetadata().then((metadata) => {
-      const unlockedIds = metadata.filter(m => !m.isLocked).map(m => m.id);
-      setUploadedTestIds(new Set(unlockedIds));
+      const unlockedMetadata = new Map();
+      metadata.filter(m => !m.isLocked).forEach(m => {
+        unlockedMetadata.set(m.id, m);
+      });
+      setUploadedTestsMetadata(unlockedMetadata);
     }).catch(console.error);
 
     // 2. Fetch the user's personal attempts and purchases
@@ -206,10 +291,10 @@ export default function MockTestsPage() {
       (TEST_CATEGORIES[activeCategory] as any).testCount || 100, 
       TEST_CATEGORIES[activeCategory].config, 
       userAttemptsMap, 
-      uploadedTestIds, 
+      uploadedTestsMetadata, 
       isCategoryUnlocked
     ),
-    [activeCategory, userAttemptsMap, uploadedTestIds, isCategoryUnlocked]
+    [activeCategory, userAttemptsMap, uploadedTestsMetadata, isCategoryUnlocked]
   );
   
   const activePattern = TEST_CATEGORIES[activeCategory];

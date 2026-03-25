@@ -218,13 +218,17 @@ export const getUploadedTestIds = async (): Promise<string[]> => {
   return querySnapshot.docs.map(doc => doc.id);
 };
 
-export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked: boolean}[]> => {
+export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked: boolean, paperName?: string}[]> => {
   const testsRef = collection(db, "mock_tests");
   const querySnapshot = await getDocs(testsRef);
-  return querySnapshot.docs.map(doc => ({ 
-    id: doc.id, 
-    isLocked: doc.data().isLocked !== undefined ? doc.data().isLocked : false 
-  }));
+  return querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    return { 
+      id: doc.id, 
+      isLocked: data.isLocked !== undefined ? data.isLocked : false,
+      paperName: data.paperName || data.testName || ""
+    };
+  });
 };
 
 export const updateMockTestLockStatus = async (testId: string, isLocked: boolean) => {

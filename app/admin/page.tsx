@@ -12,8 +12,14 @@ import Papa from "papaparse";
 const CATEGORIES = [
   "SSC CGL Tier 1",
   "SSC CGL Tier 2",
+  "SSC Previous 2025",
+  "SSC Previous 2024",
+  "SSC Previous 2023",
   "RRB NTPC CBT 1",
   "RRB NTPC CBT 2",
+  "RRB Previous 2025",
+  "RRB Previous 2024",
+  "RRB Previous 2023",
 ];
 
 export default function AdminPage() {
@@ -38,6 +44,7 @@ export default function AdminPage() {
   
   
   const [uploadMode, setUploadMode] = useState<"json" | "csv-url" | "csv-file">("json");
+  const [testName, setTestName] = useState("");
   const [jsonInput, setJsonInput] = useState("");
   const [csvUrl, setCsvUrl] = useState("");
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -214,6 +221,8 @@ export default function AdminPage() {
         savePromise = setDoc(testRef, {
           categoryId: selectedCategory,
           testNumber: testNumber,
+          testName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
+          paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
           uploadedAt: Timestamp.now(),
           questionCount: sanitizedData.length,
           isLocked: true, // Upload as explicitly locked (Draft mode) by default
@@ -230,6 +239,7 @@ export default function AdminPage() {
       setProcessStep("Finalizing...");
       setStatus("success");
       setJsonInput("");
+      setTestName("");
       await fetchUploads(); // Refresh the grid
       
       setTimeout(() => {
@@ -289,8 +299,14 @@ export default function AdminPage() {
   const prefixMap: Record<string, string> = {
     "SSC CGL Tier 1": "SSC CGL Tier 1",
     "SSC CGL Tier 2": "SSC CGL Tier 2",
+    "SSC Previous 2025": "SSC Previous 2025",
+    "SSC Previous 2024": "SSC Previous 2024",
+    "SSC Previous 2023": "SSC Previous 2023",
     "RRB NTPC CBT 1": "RRB NTPC CBT 1",
     "RRB NTPC CBT 2": "RRB NTPC CBT 2",
+    "RRB Previous 2025": "RRB Previous 2025",
+    "RRB Previous 2024": "RRB Previous 2024",
+    "RRB Previous 2023": "RRB Previous 2023",
   };
 
   return (
@@ -499,6 +515,17 @@ export default function AdminPage() {
 
           <div className="space-y-4 pt-2">
             
+            <div className="space-y-2 mb-4">
+              <label className="text-sm font-semibold">Test Paper Name (Displayed to Users)</label>
+              <input
+                type="text"
+                value={testName}
+                onChange={(e) => setTestName(e.target.value)}
+                placeholder="e.g. SSC CGL 2025 Shift 1 Previous Paper"
+                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
             <div className="flex border-b border-border mb-4">
               <button 
                 onClick={() => setUploadMode("json")}
