@@ -291,6 +291,28 @@ export default function AdminPage() {
         return found ? row[found] : undefined;
       };
 
+      // Helper to convert Excel rich text cell objects to plain strings
+      const cellToString = (val: any): string => {
+        if (val == null) return "";
+        if (typeof val === 'string') return val;
+        if (typeof val === 'number') return String(val);
+        if (Array.isArray(val)) {
+          return val.map((item: any) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item === 'object') return item.richText || item.text || item.t || item.v || '';
+            return String(item || '');
+          }).join('');
+        }
+        if (typeof val === 'object') {
+          if (val.richText) return cellToString(val.richText);
+          if (val.text) return String(val.text);
+          if (val.t) return String(val.t);
+          if (val.v) return String(val.v);
+          return '';
+        }
+        return String(val);
+      };
+
       parsedData = parsedData.map((row: any) => {
         // ── English Question ─────────────────────────────────────────────
         // Supports: "Question(english)", "Question (english)", "Question(en)", "question"
@@ -407,18 +429,18 @@ export default function AdminPage() {
 
         // Always save BOTH English and Hindi — students see their chosen language at test time
         return {
-          id: row.id || row._id || row['questions id'] || "",
-          question: question || "",
-          question_hindi: questionHindi || "",
-          options: [option1 || "", option2 || "", option3 || "", option4 || ""],
-          options_hindi: [option1Hindi || "", option2Hindi || "", option3Hindi || "", option4Hindi || ""],
-          answer: answer || "",
-          answer_hindi: answerHindi || "",
-          topic: row.topic || row.subject || "",
-          explanation: explanation || "",
-          explanation_hindi: explanationHindi || "",
-          imageUrl: questionImage || "",
-          solutionImageUrl: answerImage || ""
+          id: cellToString(row.id || row._id || row['questions id'] || ""),
+          question: cellToString(question),
+          question_hindi: cellToString(questionHindi),
+          options: [cellToString(option1), cellToString(option2), cellToString(option3), cellToString(option4)],
+          options_hindi: [cellToString(option1Hindi), cellToString(option2Hindi), cellToString(option3Hindi), cellToString(option4Hindi)],
+          answer: cellToString(answer),
+          answer_hindi: cellToString(answerHindi),
+          topic: cellToString(row.topic || row.subject || ""),
+          explanation: cellToString(explanation),
+          explanation_hindi: cellToString(explanationHindi),
+          imageUrl: cellToString(questionImage),
+          solutionImageUrl: cellToString(answerImage)
         };
       });
 

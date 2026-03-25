@@ -6,12 +6,30 @@ import { useAuth } from "@/context/AuthContext";
 import { getMockTest, getTestAttempt, saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
 import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ChevronLeft, BarChart3, Clock, Target, BookmarkPlus } from "lucide-react";
 
-// Helper: safely extract a string from data that might be a {richText} object
+// Helper: safely extract a string from data that might be a {richText} object or array of them
 const safeText = (val: any): string => {
   if (val == null) return "";
   if (typeof val === 'string') return val;
-  if (typeof val === 'object' && val.richText) return String(val.richText);
-  if (typeof val === 'object') return JSON.stringify(val);
+  if (typeof val === 'number') return String(val);
+  // Handle arrays (Excel rich text cells are stored as arrays of objects)
+  if (Array.isArray(val)) {
+    return val.map((item: any) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') {
+        // {richText: "..."} or {text: "...", ...} or {t: "..."}
+        return item.richText || item.text || item.t || item.v || '';
+      }
+      return String(item || '');
+    }).join('');
+  }
+  // Handle single object
+  if (typeof val === 'object') {
+    if (val.richText) return safeText(val.richText); // richText might itself be an array
+    if (val.text) return String(val.text);
+    if (val.t) return String(val.t);
+    if (val.v) return String(val.v);
+    return '';
+  }
   return String(val);
 };
 
