@@ -4,7 +4,39 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getMockTest, saveTestAttempt, saveQuestion, normalizeSubject, getSavedQuestions, deleteSavedQuestion } from "@/lib/firestore";
-import { Clock, AlertCircle, ArrowLeft, BookmarkPlus, CheckCircle2, ChevronRight, ChevronLeft, Flag } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2, Clock, BookOpen, AlertCircle, Globe, ArrowLeft, BookmarkPlus, Flag } from "lucide-react";
+
+// Helper: safely extract string from richText objects
+const safeText = (val: any): string => {
+  if (val == null) return "";
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (Array.isArray(val)) {
+    return val.map((item: any) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') return item.richText || item.text || item.t || item.v || '';
+      return String(item || '');
+    }).join('');
+  }
+  if (typeof val === 'object') {
+    if (val.richText) return safeText(val.richText);
+    if (val.text) return String(val.text);
+    return '';
+  }
+  return String(val);
+};
+
+// Helper: convert Google Drive share links to direct embeddable image URLs
+const toDirectImageUrl = (url: string): string => {
+  if (!url) return '';
+  const s = safeText(url).trim();
+  const driveMatch = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  const openMatch = s.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
+  if (s.includes('drive.google.com/uc')) return s;
+  return s;
+};
 
 export default function TestPlayer() {
   const params = useParams();
@@ -415,10 +447,10 @@ export default function TestPlayer() {
               {selectedLanguage === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
             </p>
 
-            {currentQ.imageUrl && currentQ.imageUrl.trim() !== "" && (
+            {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={currentQ.imageUrl} alt="Question figure" className="w-full max-h-[300px] object-contain bg-muted/30" />
+                <img src={toDirectImageUrl(safeText(currentQ.imageUrl))} alt="Question figure" className="w-full max-h-[300px] object-contain bg-muted/30" />
               </div>
             )}
 

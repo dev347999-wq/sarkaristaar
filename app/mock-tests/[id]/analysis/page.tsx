@@ -33,6 +33,25 @@ const safeText = (val: any): string => {
   return String(val);
 };
 
+// Helper: convert Google Drive share links to direct embeddable image URLs
+const toDirectImageUrl = (url: string): string => {
+  if (!url) return '';
+  const s = safeText(url).trim();
+  // Google Drive file link: https://drive.google.com/file/d/FILE_ID/view?...
+  const driveMatch = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  // Google Drive open link: https://drive.google.com/open?id=FILE_ID
+  const openMatch = s.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+  if (openMatch) {
+    return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
+  }
+  // Google Drive uc link: already direct
+  if (s.includes('drive.google.com/uc')) return s;
+  return s;
+};
+
 export default function TestAnalysis() {
   const params = useParams();
   const router = useRouter();
@@ -255,10 +274,10 @@ export default function TestAnalysis() {
                 : safeText(currentQ?.question || "No question text")}
             </p>
 
-            {currentQ?.imageUrl && safeText(currentQ.imageUrl).startsWith('http') && (
+            {currentQ?.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border bg-muted/30 p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={safeText(currentQ.imageUrl)} alt="Question figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
+                <img src={toDirectImageUrl(safeText(currentQ.imageUrl))} alt="Question figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
               </div>
             )}
 
@@ -299,10 +318,10 @@ export default function TestAnalysis() {
                 <CheckCircle2 className="w-5 h-5" /> Detailed Explanation
               </div>
               
-              {currentQ?.solutionImageUrl && safeText(currentQ.solutionImageUrl).startsWith('http') && (
+              {currentQ?.solutionImageUrl && toDirectImageUrl(safeText(currentQ.solutionImageUrl)).startsWith('http') && (
                 <div className="mb-4 rounded-lg overflow-hidden border border-primary/10 bg-white dark:bg-slate-900 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={safeText(currentQ.solutionImageUrl)} alt="Solution figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
+                  <img src={toDirectImageUrl(safeText(currentQ.solutionImageUrl))} alt="Solution figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
                 </div>
               )}
 
