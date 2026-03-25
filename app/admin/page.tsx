@@ -181,37 +181,54 @@ export default function AdminPage() {
         throw new Error("No valid question columns found. Ensure your headers match: question, question (EN), or question (HI).");
       }
 
-      // Automatically map columns like "Option A" or "option1" into a clean standard format
-      setProcessStep("Mapping and formatting questions...");
-      parsedData = parsedData.map((row: any) => {
-        // Since we lowercased headers earlier, we check for 'option a', 'option 1', etc.
-        const optionsArray = [
-          row['question (en)'] ? (row['option 1 (en)'] || row['option 1'] || "") : (row['options1'] || row['options 1'] || row['option1'] || row['option 1'] || row['option a'] || row['option_a'] || row['optionA'] || ""),
-          row['question (en)'] ? (row['option 2 (en)'] || row['option 2'] || "") : (row['options2'] || row['options 2'] || row['option2'] || row['option 2'] || row['option b'] || row['option_b'] || row['optionB'] || ""),
-          row['question (en)'] ? (row['option 3 (en)'] || row['option 3'] || "") : (row['options3'] || row['options 3'] || row['option3'] || row['option 3'] || row['option c'] || row['option_c'] || row['optionC'] || ""),
-          row['question (en)'] ? (row['option 4 (en)'] || row['option 4'] || "") : (row['options4'] || row['options 4'] || row['option4'] || row['option 4'] || row['option d'] || row['option_d'] || row['optionD'] || "")
-        ];
+      // Helper to find a key in an object regardless of minor variations
+      const findValue = (row: any, keywords: string[], exclude?: string[]) => {
+        const keys = Object.keys(row);
+        const foundKey = keys.find(k => {
+          const lowerK = k.toLowerCase();
+          const matches = keywords.every(kw => lowerK.includes(kw.toLowerCase()));
+          const notExcluded = !exclude || !exclude.some(ex => lowerK.includes(ex.toLowerCase()));
+          return matches && notExcluded;
+        });
+        return foundKey ? row[foundKey] : undefined;
+      };
 
-        const optionsHindiArray = [
-          row['question (hi)'] ? (row['option 1 (hi)'] || row['option 1_hindi'] || "") : (row['options1_hindi'] || row['options 1 hindi'] || row['option1_hindi'] || row['option 1 hindi'] || row['option1 hindi'] || ""),
-          row['question (hi)'] ? (row['option 2 (hi)'] || row['option 2_hindi'] || "") : (row['options2_hindi'] || row['options 2 hindi'] || row['option2_hindi'] || row['option 2 hindi'] || row['option2 hindi'] || ""),
-          row['question (hi)'] ? (row['option 3 (hi)'] || row['option 3_hindi'] || "") : (row['options3_hindi'] || row['options 3 hindi'] || row['option3_hindi'] || row['option 3 hindi'] || row['option3 hindi'] || ""),
-          row['question (hi)'] ? (row['option 4 (hi)'] || row['option 4_hindi'] || "") : (row['options4_hindi'] || row['options 4 hindi'] || row['option4_hindi'] || row['option 4 hindi'] || row['option4 hindi'] || "")
-        ];
+      setProcessStep("Mapping questions (fuzzy logic)...");
+      parsedData = parsedData.map((row: any) => {
+        // Find English fields
+        const question = findValue(row, ['question'], ['hi', 'hindi', '(hi)']);
+        const option1 = findValue(row, ['option', '1'], ['hi', 'hindi', '(hi)']);
+        const option2 = findValue(row, ['option', '2'], ['hi', 'hindi', '(hi)']);
+        const option3 = findValue(row, ['option', '3'], ['hi', 'hindi', '(hi)']);
+        const option4 = findValue(row, ['option', '4'], ['hi', 'hindi', '(hi)']);
+        const answer = findValue(row, ['correct'], ['hi', 'hindi', '(hi)']) || findValue(row, ['answer'], ['hi', 'hindi', '(hi)']);
+        const explanation = findValue(row, ['solution'], ['hi', 'hindi', '(hi)']) || findValue(row, ['explanation'], ['hi', 'hindi', '(hi)']);
+
+        // Find Hindi fields
+        const questionHindi = findValue(row, ['question', 'hi']) || findValue(row, ['question', 'hindi']) || findValue(row, ['question', '(hi)']);
+        const option1Hindi = findValue(row, ['option', '1', 'hi']) || findValue(row, ['option', '1', 'hindi']) || findValue(row, ['option', '1', '(hi)']);
+        const option2Hindi = findValue(row, ['option', '2', 'hi']) || findValue(row, ['option', '2', 'hindi']) || findValue(row, ['option', '2', '(hi)']);
+        const option3Hindi = findValue(row, ['option', '3', 'hi']) || findValue(row, ['option', '3', 'hindi']) || findValue(row, ['option', '3', '(hi)']);
+        const option4Hindi = findValue(row, ['option', '4', 'hi']) || findValue(row, ['option', '4', 'hindi']) || findValue(row, ['option', '4', '(hi)']);
+        const answerHindi = findValue(row, ['correct', 'hi']) || findValue(row, ['correct', 'hindi']) || findValue(row, ['answer', 'hi']) || findValue(row, ['answer', 'hindi']);
+        const explanationHindi = findValue(row, ['solution', 'hi']) || findValue(row, ['solution', 'hindi']) || findValue(row, ['explanation', 'hi']) || findValue(row, ['explanation', 'hindi']);
 
         return {
           id: row.id || row._id || row['questions id'] || "",
-          question: uploadLanguage === "hindi" ? "" : (row.question || row['question (en)'] || ""),
-          question_hindi: uploadLanguage === "english" ? "" : (row['question (hi)'] || row.question_hindi || row['question hindi'] || (uploadLanguage === "hindi" ? (row.question || row['question (hi)']) : "")),
-          options: uploadLanguage === "hindi" ? ["","","",""] : optionsArray,
-          options_hindi: uploadLanguage === "english" ? ["","","",""] : (optionsHindiArray.some(o => o) ? optionsHindiArray : (uploadLanguage === "hindi" ? optionsArray : ["","","",""])),
-          answer: uploadLanguage === "hindi" ? "" : (row.answer || row.correct || row['correct answer'] || row['correct_answer'] || ""),
-          answer_hindi: uploadLanguage === "english" ? "" : (row.answer_hindi || row['answer hindi'] || row['correct answer hindi'] || row.correct || (uploadLanguage === "hindi" ? (row.answer || row.correct) : "")),
-          topic: row.topic || "",
-          explanation: uploadLanguage === "hindi" ? "" : (row.explanation || row['solution (en)'] || row.solution || row['detailed answer'] || ""),
-          explanation_hindi: uploadLanguage === "english" ? "" : (row['solution (hi)'] || row.explanation_hindi || row['explanation hindi'] || row['solution hindi'] || (uploadLanguage === "hindi" ? (row.explanation || row.solution) : ""))
+          question: uploadLanguage === "hindi" ? "" : (question || ""),
+          question_hindi: uploadLanguage === "english" ? "" : (questionHindi || (uploadLanguage === "hindi" ? question : "")),
+          options: uploadLanguage === "hindi" ? ["","","",""] : [option1 || "", option2 || "", option3 || "", option4 || ""],
+          options_hindi: uploadLanguage === "english" ? ["","","",""] : [option1Hindi || "", option2Hindi || "", option3Hindi || "", option4Hindi || ""],
+          answer: uploadLanguage === "hindi" ? "" : (answer || ""),
+          answer_hindi: uploadLanguage === "english" ? "" : (answerHindi || (uploadLanguage === "hindi" ? answer : "")),
+          topic: row.topic || row.subject || "",
+          explanation: uploadLanguage === "hindi" ? "" : (explanation || ""),
+          explanation_hindi: uploadLanguage === "english" ? "" : (explanationHindi || (uploadLanguage === "hindi" ? explanation : ""))
         };
       });
+
+      // Special check: if options_hindi are all empty but we have bilingual data, try to use English as fallback if needed or just keep empty
+      // Actually the Player handles the fallback nicely.
 
       const prefixMap: Record<string, string> = {
         "SSC CGL Tier 1": "SSC CGL Tier 1",
