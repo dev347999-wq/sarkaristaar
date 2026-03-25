@@ -33,11 +33,12 @@ export default function TestPlayer() {
     }
   }, [user, authLoading, router]);
 
-  const handleAnswerSelect = (option: string) => {
+  const handleAnswerSelect = (optionIndex: number) => {
     if (isSubmitted) return;
+    const letter = ["A", "B", "C", "D"][optionIndex];
     setAnswers(prev => ({
       ...prev,
-      [currentQIndex]: option
+      [currentQIndex]: letter
     }));
   };
 
@@ -93,10 +94,10 @@ export default function TestPlayer() {
     const questions = test.questionsData;
     
     questions.forEach((q: any, i: number) => {
-      const uAnswer = answers[i];
-      if (!uAnswer) {
+      const uLetter = answers[i];
+      if (!uLetter) {
         unattempted++;
-      } else if (uAnswer.trim().toLowerCase() === q.answer.trim().toLowerCase()) {
+      } else if (uLetter.trim().toUpperCase() === q.answer.trim().toUpperCase()) {
         correct++;
       } else {
         incorrect++;
@@ -111,8 +112,8 @@ export default function TestPlayer() {
     const totalPossibleMarks = questions.length * marksPerCorrect;
     
     const resultObj = {
-      testId: (test as any).id,
-      testTitle: `${(test as any).categoryId} Mock ${(test as any).testNumber}`,
+      testId: decodeURIComponent(params.id as string),
+      testTitle: (test as any).paperName || `${(test as any).categoryId} Mock ${(test as any).testNumber}`,
       category: (test as any).categoryId,
       score: finalScore,
       totalMarks: totalPossibleMarks,
@@ -418,13 +419,14 @@ export default function TestPlayer() {
 
             <div className="space-y-3">
               {(selectedLanguage === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
-                const isSelected = answers[currentQIndex] === option;
+                const currentLetter = ["A", "B", "C", "D"][i];
+                const isSelected = answers[currentQIndex] === currentLetter;
                 
                 let btnStyle = "bg-muted/50 hover:bg-muted border-transparent";
                 if (isSelected) btnStyle = "bg-primary/10 border-primary text-primary font-medium";
                 
                 if (isSubmitted) {
-                   const isCorrectOption = option.trim().toLowerCase() === (selectedLanguage === 'hindi' ? (currentQ.answer_hindi || currentQ.answer) : currentQ.answer).trim().toLowerCase();
+                   const isCorrectOption = currentLetter === currentQ.answer.trim().toUpperCase();
                    if (isCorrectOption) {
                       btnStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-400 font-bold";
                    } else if (isSelected && !isCorrectOption) {
@@ -437,11 +439,11 @@ export default function TestPlayer() {
                 return (
                   <button
                     key={i}
-                    onClick={() => handleAnswerSelect(option)}
+                    onClick={() => handleAnswerSelect(i)}
                     disabled={isSubmitted}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${btnStyle}`}
                   >
-                    <span className="font-bold mr-3">{["A","B","C","D"][i]}.</span> {option}
+                    <span className="font-bold mr-3">{currentLetter}.</span> {option}
                   </button>
                 );
               })}
@@ -487,28 +489,28 @@ export default function TestPlayer() {
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 shadow-sm h-fit sticky top-24">
         
         {isSubmitted && scoreData && (
-           <div className="mb-6 p-6 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center space-y-4 animate-in zoom-in-95 duration-500">
+           <div className="mb-6 p-6 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center space-y-6 animate-in zoom-in-95 duration-500">
                <div className="space-y-1">
-                 <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Final Score</p>
-                 <h2 className="text-5xl font-black text-primary">{scoreData.score}<span className="text-xl text-muted-foreground font-medium">/{scoreData.totalMarks}</span></h2>
+                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Total Marks Obtained</p>
+                 <h2 className="text-5xl font-black text-primary drop-shadow-sm">{scoreData.score}<span className="text-xl text-muted-foreground font-medium opacity-50">/{scoreData.totalMarks}</span></h2>
                </div>
                
-               <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-2 border-t border-primary/10">
-                 <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
-                   <p className="opacity-70 uppercase tracking-tighter">Correct</p>
-                   <p className="text-lg">{scoreData.correct}</p>
+               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-primary/10">
+                 <div className="p-3 bg-emerald-500/5 text-emerald-600 rounded-xl border border-emerald-500/10">
+                   <p className="text-[9px] font-bold uppercase tracking-tighter opacity-70">Correct</p>
+                   <p className="text-xl font-black">{scoreData.correct}</p>
                  </div>
-                 <div className="p-2 bg-destructive/10 text-destructive rounded-lg">
-                   <p className="opacity-70 uppercase tracking-tighter">Wrong</p>
-                   <p className="text-lg">{scoreData.incorrect}</p>
+                 <div className="p-3 bg-rose-500/5 text-rose-600 rounded-xl border border-rose-500/10">
+                   <p className="text-[9px] font-bold uppercase tracking-tighter opacity-70">Wrong</p>
+                   <p className="text-xl font-black">{scoreData.incorrect}</p>
                  </div>
                </div>
 
                <button 
-                 onClick={() => router.push(`/mock-tests/${params.id}/analysis`)}
-                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-black text-sm uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-4"
+                 onClick={() => router.push(`/mock-tests/${decodeURIComponent(params.id as string)}/analysis`)}
+                 className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm uppercase tracking-widest hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-4"
                >
-                 View Detailed Solution <ChevronRight className="w-4 h-4" />
+                 View Detailed Analysis <ChevronRight className="w-4 h-4" />
                </button>
            </div>
         )}
@@ -524,7 +526,9 @@ export default function TestPlayer() {
               if (currentQIndex === i) {
                 style = "ring-2 ring-primary ring-offset-2 ring-offset-card bg-muted text-foreground font-bold";
               } else if (isSubmitted) {
-                const isCorrect = answers[i] && answers[i].trim().toLowerCase() === questions[i].answer.trim().toLowerCase();
+                const uLetter = answers[i];
+                const correctLetter = (questions[i].answer || "").trim().toUpperCase();
+                const isCorrect = uLetter && uLetter === correctLetter;
                 if (!isAttempted) style = "bg-muted text-muted-foreground border-border";
                 else if (isCorrect) style = "bg-emerald-500/20 text-emerald-700 border-emerald-500 dark:text-emerald-400";
                 else style = "bg-destructive/20 text-destructive border-destructive";

@@ -227,9 +227,12 @@ export default function TestAnalysis() {
 
             <div className="space-y-3">
               {(attempt.language === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
-                const uAnswer = answers[currentQIndex];
-                const isSelected = uAnswer === option;
-                const isCorrectOption = option.trim().toLowerCase() === (attempt.language === 'hindi' ? (currentQ.answer_hindi || currentQ.answer) : currentQ.answer).trim().toLowerCase();
+                const currentLetter = ["A", "B", "C", "D"][i];
+                const uAnswerLetter = answers[currentQIndex]; // Now a letter like "A"
+                const isSelected = uAnswerLetter === currentLetter;
+                // Correct answer is also a letter like "A"
+                const correctLetter = (currentQ.answer || "").trim().toUpperCase();
+                const isCorrectOption = currentLetter === correctLetter;
                 
                 let btnStyle = "bg-muted/30 border-transparent opacity-60";
                 
@@ -245,7 +248,7 @@ export default function TestAnalysis() {
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between ${btnStyle}`}
                   >
                     <div>
-                      <span className="font-bold mr-3">{["A","B","C","D"][i]}.</span> {option}
+                      <span className="font-bold mr-3">{currentLetter}.</span> {option}
                     </div>
                     {isCorrectOption && <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
                     {isSelected && !isCorrectOption && <AlertCircle className="w-5 h-5 text-destructive" />}
@@ -297,9 +300,10 @@ export default function TestAnalysis() {
           <h3 className="font-bold mb-4">Jump to Question</h3>
           <div className="grid grid-cols-5 gap-2">
             {questions.map((_: any, i: number) => {
-              const uAnswer = answers[i];
-              const isAttempted = !!uAnswer;
-              const isCorrect = isAttempted && uAnswer.trim().toLowerCase() === questions[i].answer.trim().toLowerCase();
+              const uAnswerLetter = answers[i];
+              const isAttempted = !!uAnswerLetter;
+              const correctLetter = questions[i].answer.trim().toUpperCase();
+              const isCorrect = isAttempted && uAnswerLetter === correctLetter;
               
               let style = "";
               
