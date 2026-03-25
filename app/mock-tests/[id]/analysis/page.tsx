@@ -94,9 +94,17 @@ export default function TestAnalysis() {
     );
   }
 
-  const currentQ = questions[currentQIndex];
+  const currentQ = questions[currentQIndex] || {};
   // Parse the answers object (fallback for older DB entries before adding the field)
-  const answers = attempt.answers || {};
+  const answers = attempt?.answers || {};
+  
+  // Debug log to help identify the crash in production if it persists
+  console.log("Analysis Debug:", { 
+    currentQIndex, 
+    questionExists: !!questions[currentQIndex],
+    questionsTotal: questions.length,
+    attemptId: attempt?.id 
+  });
 
   const toggleSave = async () => {
     if (!user || !test || isSaving) return;
@@ -215,7 +223,9 @@ export default function TestAnalysis() {
             </div>
 
             <p className="text-lg font-medium mb-8 leading-relaxed whitespace-pre-wrap">
-              {attempt.language === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
+              {attempt?.language === 'hindi' 
+                ? (currentQ?.question_hindi || currentQ?.question || "No question text") 
+                : (currentQ?.question || "No question text")}
             </p>
 
             {currentQ.imageUrl && currentQ.imageUrl.trim() !== "" && (
@@ -231,7 +241,7 @@ export default function TestAnalysis() {
                 const uAnswerLetter = answers[currentQIndex]; 
                 const isSelected = uAnswerLetter === currentLetter;
                 // Safe access to answer
-                const correctLetter = (currentQ?.answer || "").trim().toUpperCase();
+                const correctLetter = (currentQ?.answer || "").toString().trim().toUpperCase();
                 const isCorrectOption = currentLetter === correctLetter;
                 
                 let btnStyle = "bg-muted/30 border-transparent opacity-60";
@@ -270,7 +280,7 @@ export default function TestAnalysis() {
               )}
 
               <p className="text-sm font-medium whitespace-pre-wrap">
-                 {(attempt.language === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) || "No explanation provided."}
+                 {(attempt?.language === 'hindi' ? (currentQ?.explanation_hindi || currentQ?.explanation) : currentQ?.explanation) || "No explanation provided."}
               </p>
             </div>
           </div>
@@ -303,7 +313,7 @@ export default function TestAnalysis() {
               const uAnswerLetter = answers[i];
               const isAttempted = !!uAnswerLetter;
               const qData = questions[i] || {};
-              const correctLetter = (qData.answer || "").trim().toUpperCase();
+              const correctLetter = (qData?.answer || "").toString().trim().toUpperCase();
               const isCorrect = isAttempted && uAnswerLetter === correctLetter;
               
               let style = "";
