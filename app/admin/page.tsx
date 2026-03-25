@@ -186,13 +186,24 @@ export default function AdminPage() {
           row['option4'] || row['option 4'] || row['option d'] || row['option_d'] || row['optionD'] || ""
         ];
 
+        const optionsHindiArray = [
+          row['option1_hindi'] || row['option 1 hindi'] || row['option1 hindi'] || "",
+          row['option2_hindi'] || row['option 2 hindi'] || row['option2 hindi'] || "",
+          row['option3_hindi'] || row['option 3 hindi'] || row['option3 hindi'] || "",
+          row['option4_hindi'] || row['option 4 hindi'] || row['option4 hindi'] || ""
+        ];
+
         return {
           id: row.id || row._id || "",
           question: row.question,
+          question_hindi: row.question_hindi || row['question hindi'] || "",
           options: optionsArray,
+          options_hindi: optionsHindiArray,
           answer: row.answer || "",
+          answer_hindi: row.answer_hindi || row['answer hindi'] || "",
           topic: row.topic || "",
-          explanation: row.explanation || ""
+          explanation: row.explanation || "",
+          explanation_hindi: row.explanation_hindi || row['explanation hindi'] || ""
         };
       });
 

@@ -22,6 +22,7 @@ export default function TestPlayer() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<"english" | "hindi" | null>(null);
   const [scoreData, setScoreData] = useState<any>(null);
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -159,7 +160,8 @@ export default function TestPlayer() {
       totalMarks: totalPossibleMarks,
       accuracy: correct + incorrect > 0 ? Math.round((correct / (correct+incorrect)) * 100) : 0,
       timeSpentStr: `${Math.floor((3600 - timeLeft)/60)}m ${(3600 - timeLeft)%60}s`,
-      answers: answers
+      answers: answers,
+      language: selectedLanguage || 'english'
     };
     
     setScoreData({
@@ -191,67 +193,112 @@ export default function TestPlayer() {
   const questions = test.questionsData;
   const currentQ = questions[currentQIndex];
 
-  // -------------------------------------------------------------
-  // Instructions Screen
-  // -------------------------------------------------------------
+  // 1. Language Selection Screen
+  if (!selectedLanguage) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden p-8 space-y-8 animate-in zoom-in-95 duration-300">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-black text-slate-900">Choose Language</h1>
+            <p className="text-slate-500 font-medium">Select your preferred language for this test</p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <button 
+              onClick={() => setSelectedLanguage("english")}
+              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-primary/5 transition-all group"
+            >
+              <span className="text-2xl font-bold text-slate-800 group-hover:text-primary">English</span>
+              <span className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Standard</span>
+            </button>
+            <button 
+              onClick={() => setSelectedLanguage("hindi")}
+              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-primary/5 transition-all group"
+            >
+              <span className="text-2xl font-bold text-slate-800 group-hover:text-primary">हिन्दी (Hindi)</span>
+              <span className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Recommended</span>
+            </button>
+          </div>
+          
+          <p className="text-[10px] text-center text-slate-400 uppercase font-black tracking-widest">You can't change this once the test starts</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Instructions Screen
   if (!isStarted) {
+    const isHindi = selectedLanguage === "hindi";
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="max-w-4xl w-full bg-white border border-slate-200 shadow-sm rounded-md overflow-hidden flex flex-col h-[85vh]">
           
           <div className="bg-slate-800 text-white p-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold tracking-wide">TEST INSTRUCTIONS</h1>
-            <div className="text-sm font-medium bg-slate-700 px-3 py-1 rounded">
-              {test.categoryId}
-            </div>
+            <h1 className="text-xl font-bold tracking-wide">{isHindi ? "परीक्षा निर्देश" : "TEST INSTRUCTIONS"}</h1>
+            <button onClick={() => setSelectedLanguage(null)} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">
+              {isHindi ? "← भाषा बदलें" : "← Change Language"}
+            </button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar text-slate-800">
-            <h2 className="text-xl font-bold text-center underline mb-8">Please read the instructions carefully</h2>
+            <h2 className="text-xl font-bold text-center underline mb-8">{isHindi ? "कृपया निर्देशों को ध्यान से पढ़ें" : "Please read the instructions carefully"}</h2>
             
             <div className="space-y-4 text-sm leading-relaxed">
-               <h3 className="font-bold text-base">General Instructions:</h3>
+               <h3 className="font-bold text-base">{isHindi ? "सामान्य निर्देश:" : "General Instructions:"}</h3>
                <ol className="list-decimal pl-6 space-y-2">
-                 <li>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself. You will not be required to end or submit your examination.</li>
-                 <li>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:
-                    <ul className="mt-2 space-y-2 list-none mb-4">
-                      <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center text-xs">1</div> You have NOT answered the question.</li>
-                      <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center text-xs">2</div> You have answered the question.</li>
-                      <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-xs">3</div> You have NOT answered the question, but have marked the question for review.</li>
-                    </ul>
-                 </li>
-                 <li>You can click on the "&gt;" arrow which appears to the left of question palette to collapse the question palette thereby maximizing the question window. To view the question palette again, you can click on "&lt;" which appears on the right side of question window.</li>
+                 {isHindi ? (
+                   <>
+                     <li>घड़ी सर्वर पर सेट की जाएगी। स्क्रीन के ऊपरी दाएं कोने में काउंटडाउन टाइमर परीक्षा पूरी करने के लिए आपके पास उपलब्ध शेष समय प्रदर्शित करेगा। जब टाइमर शून्य पर पहुंच जाएगा, तो परीक्षा अपने आप समाप्त हो जाएगी। आपको अपनी परीक्षा समाप्त या सबमिट करने की आवश्यकता नहीं होगी।</li>
+                     <li>स्क्रीन के दाईं ओर प्रदर्शित प्रश्न पैलेट निम्नलिखित प्रतीकों में से एक का उपयोग करके प्रत्येक प्रश्न की स्थिति दिखाएगा:
+                        <ul className="mt-2 space-y-2 list-none mb-4">
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center text-xs">1</div> आपने प्रश्न का उत्तर नहीं दिया है।</li>
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center text-xs">2</div> आपने प्रश्न का उत्तर दे दिया है।</li>
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-xs">3</div> आपने प्रश्न का उत्तर नहीं दिया है, लेकिन प्रश्न को समीक्षा के लिए चिह्नित किया है।</li>
+                        </ul>
+                     </li>
+                   </>
+                 ) : (
+                   <>
+                     <li>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself. You will not be required to end or submit your examination.</li>
+                     <li>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:
+                        <ul className="mt-2 space-y-2 list-none mb-4">
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center text-xs">1</div> You have NOT answered the question.</li>
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center text-xs">2</div> You have answered the question.</li>
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-xs">3</div> You have NOT answered the question, but have marked the question for review.</li>
+                        </ul>
+                     </li>
+                   </>
+                 )}
                </ol>
                
-               <h3 className="font-bold text-base mt-6">Navigating to a Question:</h3>
+               <h3 className="font-bold text-base mt-6">{isHindi ? "प्रश्न पर नेविगेट करना:" : "Navigating to a Question:"}</h3>
                <ol className="list-decimal pl-6 space-y-2">
-                 <li>To answer a question, do the following:
+                 <li>{isHindi ? "प्रश्न का उत्तर देने के लिए, निम्नलिखित करें:" : "To answer a question, do the following:"}
                    <ul className="list-[lower-alpha] pl-6 mt-1 space-y-1">
-                     <li>Click on the question number in the Question Palette at the right of your screen to go to that numbered question directly. Note that using this option does NOT save your answer to the current question.</li>
-                     <li>Click on <strong>Next</strong> to save your answer for the current question and then go to the next question.</li>
-                     <li>Click on <strong>Mark for Review</strong> to flag it to look at it later.</li>
-                   </ul>
-                 </li>
-               </ol>
-               
-               <h3 className="font-bold text-base mt-6">Answering a Question:</h3>
-               <ol className="list-decimal pl-6 space-y-2">
-                 <li>Procedure for answering a multiple choice type question:
-                   <ul className="list-[lower-alpha] pl-6 mt-1 space-y-1">
-                     <li>To select your answer, click on the button of one of the options.</li>
-                     <li>To deselect your chosen answer, click on the button of the chosen option again or click on the <strong>Clear Response</strong> button.</li>
-                     <li>To change your chosen answer, click on the button of another option.</li>
+                     {isHindi ? (
+                       <>
+                         <li>अपनी स्क्रीन के दाईं ओर प्रश्न पैलेट में प्रश्न संख्या पर क्लिक करें ताकि आप सीधे उस नंबर वाले प्रश्न पर जा सकें। ध्यान दें कि इस विकल्प का उपयोग करने से वर्तमान प्रश्न का आपका उत्तर सुरक्षित नहीं होता है।</li>
+                         <li>वर्तमान प्रश्न के लिए अपना उत्तर सुरक्षित करने और फिर अगले प्रश्न पर जाने के लिए <strong>Next</strong> पर क्लिक करें।</li>
+                         <li>बाद में इसे देखने के लिए <strong>Mark for Review</strong> पर क्लिक करें।</li>
+                       </>
+                     ) : (
+                       <>
+                         <li>Click on the question number in the Question Palette at the right of your screen to go to that numbered question directly. Note that using this option does NOT save your answer to the current question.</li>
+                         <li>Click on <strong>Next</strong> to save your answer for the current question and then go to the next question.</li>
+                         <li>Click on <strong>Mark for Review</strong> to flag it to look at it later.</li>
+                       </>
+                     )}
                    </ul>
                  </li>
                </ol>
                
                <div className="mt-8 p-4 bg-blue-50 border border-blue-100 rounded-md">
-                 <p className="font-bold text-blue-900 mb-2">Examination Summary</p>
+                 <p className="font-bold text-blue-900 mb-2">{isHindi ? "परीक्षा सारांश" : "Examination Summary"}</p>
                  <ul className="space-y-1 text-blue-800">
-                   <li><strong>Total Questions:</strong> {questions.length}</li>
-                   <li><strong>Total Time:</strong> {Math.floor(timeLeft / 60)} Minutes</li>
-                   <li><strong>Correct Answer:</strong> +2.00 Marks</li>
-                   <li><strong>Incorrect Answer:</strong> -0.50 Marks</li>
+                   <li><strong>{isHindi ? "कुल प्रश्न:" : "Total Questions:"}</strong> {questions.length}</li>
+                   <li><strong>{isHindi ? "कुल समय:" : "Total Time:"}</strong> {Math.floor(timeLeft / 60)} {isHindi ? "मिनट" : "Minutes"}</li>
+                   <li><strong>{isHindi ? "सही उत्तर:" : "Correct Answer:"}</strong> +2.00 Marks</li>
+                   <li><strong>{isHindi ? "गलत उत्तर:" : "Incorrect Answer:"}</strong> -0.50 Marks</li>
                  </ul>
                </div>
             </div>
@@ -260,20 +307,20 @@ export default function TestPlayer() {
           <div className="bg-slate-100 p-4 border-t border-slate-200 flex justify-between items-center">
             <label className="flex items-center gap-2 cursor-pointer text-sm font-medium select-none text-slate-700">
               <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" id="declare-checkbox" />
-              I have read and understood the instructions.
+              {isHindi ? "मैंने निर्देशों को पढ़ और समझ लिया है।" : "I have read and understood the instructions."}
             </label>
             <button 
               onClick={() => {
                 const cb = document.getElementById('declare-checkbox') as HTMLInputElement;
                 if (!cb.checked) {
-                   alert("Please accept the terms and conditions before proceeding.");
+                   alert(isHindi ? "आगे बढ़ने से पहले कृपया नियम और शर्तें स्वीकार करें।" : "Please accept the terms and conditions before proceeding.");
                    return;
                 }
                 setIsStarted(true);
               }}
               className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-md shadow-sm transition-colors text-sm"
             >
-              I am ready to begin
+              {isHindi ? "मैं शुरू करने के लिए तैयार हूँ" : "I am ready to begin"}
             </button>
           </div>
         </div>
@@ -333,7 +380,9 @@ export default function TestPlayer() {
               </div>
             </div>
 
-            <p className="text-lg md:text-xl font-medium mb-8 leading-relaxed whitespace-pre-wrap">{currentQ.question}</p>
+            <p className="text-lg md:text-xl font-medium mb-8 leading-relaxed whitespace-pre-wrap">
+              {selectedLanguage === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
+            </p>
 
             {currentQ.imageUrl && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border">
@@ -343,14 +392,14 @@ export default function TestPlayer() {
             )}
 
             <div className="space-y-3">
-              {currentQ.options.map((option: string, i: number) => {
+              {(selectedLanguage === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
                 const isSelected = answers[currentQIndex] === option;
                 
                 let btnStyle = "bg-muted/50 hover:bg-muted border-transparent";
                 if (isSelected) btnStyle = "bg-primary/10 border-primary text-primary font-medium";
                 
                 if (isSubmitted) {
-                   const isCorrectOption = option.trim().toLowerCase() === currentQ.answer.trim().toLowerCase();
+                   const isCorrectOption = option.trim().toLowerCase() === (selectedLanguage === 'hindi' ? (currentQ.answer_hindi || currentQ.answer) : currentQ.answer).trim().toLowerCase();
                    if (isCorrectOption) {
                       btnStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-700 dark:text-emerald-400 font-bold";
                    } else if (isSelected && !isCorrectOption) {
@@ -373,10 +422,10 @@ export default function TestPlayer() {
               })}
             </div>
             
-            {isSubmitted && currentQ.explanation && (
+            {isSubmitted && (selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) && (
               <div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-xl text-sm leading-relaxed">
                 <span className="font-bold text-primary mb-1 block">Explanation:</span>
-                {currentQ.explanation}
+                {selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation}
               </div>
             )}
           </div>

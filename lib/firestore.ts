@@ -25,6 +25,7 @@ export interface TestAttempt {
   accuracy: number;
   timeSpentStr: string;
   answers: Record<number, string>;
+  language?: string;
   dateCompleted: Date;
 }
 
@@ -34,12 +35,16 @@ export interface SavedQuestion {
   subject: string;
   topic: string;
   questionText: string;
+  questionHindi?: string;
   options: string[];
+  optionsHindi?: string[];
   correctAnswer: string;
+  answerHindi?: string;
   userNotes?: string;
   imageUrl?: string;
   savedAt: Date;
   explanation?: string;
+  explanationHindi?: string;
 }
 
 export interface Note {

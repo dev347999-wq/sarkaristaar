@@ -177,13 +177,33 @@ export default function TestAnalysis() {
               </div>
             </div>
 
-            <p className="text-lg font-medium mb-8 leading-relaxed whitespace-pre-wrap">{currentQ.question}</p>
+            {/* Language Toggle in Analysis */}
+            <div className="flex justify-end mb-4">
+               <div className="bg-muted p-1 rounded-lg flex gap-1">
+                  <button 
+                    onClick={() => setAttempt({...attempt, language: 'english'})}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${attempt.language === 'english' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    English
+                  </button>
+                  <button 
+                    onClick={() => setAttempt({...attempt, language: 'hindi'})}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${attempt.language === 'hindi' ? 'bg-white shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Hindi
+                  </button>
+               </div>
+            </div>
+
+            <p className="text-lg font-medium mb-8 leading-relaxed whitespace-pre-wrap">
+              {attempt.language === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
+            </p>
 
             <div className="space-y-3">
-              {currentQ.options.map((option: string, i: number) => {
+              {(attempt.language === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
                 const uAnswer = answers[currentQIndex];
                 const isSelected = uAnswer === option;
-                const isCorrectOption = option.trim().toLowerCase() === currentQ.answer.trim().toLowerCase();
+                const isCorrectOption = option.trim().toLowerCase() === (attempt.language === 'hindi' ? (currentQ.answer_hindi || currentQ.answer) : currentQ.answer).trim().toLowerCase();
                 
                 let btnStyle = "bg-muted/30 border-transparent opacity-60";
                 
@@ -208,12 +228,12 @@ export default function TestAnalysis() {
               })}
             </div>
             
-            <div className="mt-8 p-5 bg-primary/5 border border-primary/20 rounded-xl leading-relaxed">
+            <div className="mt-8 p-5 bg-primary/5 border border-primary/20 rounded-xl leading-relaxed text-slate-800 dark:text-slate-200">
               <div className="flex items-center gap-2 font-bold text-primary mb-3 text-lg">
                 <CheckCircle2 className="w-5 h-5" /> Detailed Explanation
               </div>
-              <p className="text-sm text-foreground/90 whitespace-pre-wrap">
-                 {currentQ.explanation || "No advanced explanation provided for this question. The correct answer is inherently self-explanatory or factual."}
+              <p className="text-sm font-medium whitespace-pre-wrap">
+                 {(attempt.language === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) || "No explanation provided."}
               </p>
             </div>
           </div>
