@@ -228,7 +228,7 @@ export default function TestAnalysis() {
                 : (currentQ?.question || "No question text")}
             </p>
 
-            {currentQ.imageUrl && currentQ.imageUrl.trim() !== "" && (
+            {currentQ?.imageUrl && String(currentQ.imageUrl).trim() !== "" && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border bg-muted/30 p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={currentQ.imageUrl} alt="Question figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
@@ -236,7 +236,7 @@ export default function TestAnalysis() {
             )}
 
             <div className="space-y-3">
-              {(attempt.language === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
+              {(attempt?.language === 'hindi' && currentQ?.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : (currentQ?.options || [])).map((option: string, i: number) => {
                 const currentLetter = ["A", "B", "C", "D"][i];
                 const uAnswerLetter = answers[currentQIndex]; 
                 const isSelected = uAnswerLetter === currentLetter;
@@ -272,7 +272,7 @@ export default function TestAnalysis() {
                 <CheckCircle2 className="w-5 h-5" /> Detailed Explanation
               </div>
               
-              {currentQ.solutionImageUrl && currentQ.solutionImageUrl.trim() !== "" && (
+              {currentQ?.solutionImageUrl && String(currentQ.solutionImageUrl).trim() !== "" && (
                 <div className="mb-4 rounded-lg overflow-hidden border border-primary/10 bg-white dark:bg-slate-900 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={currentQ.solutionImageUrl} alt="Solution figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
