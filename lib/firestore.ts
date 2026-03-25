@@ -24,7 +24,7 @@ export interface TestAttempt {
   totalMarks: number;
   accuracy: number;
   timeSpentStr: string;
-  answers: Record<number, string>;
+  answers: Record<string, string>;
   language?: string;
   dateCompleted: Date;
 }
@@ -96,7 +96,7 @@ export const getUserTestAttempts = async (userId: string): Promise<TestAttempt[]
     return {
       id: doc.id,
       ...data,
-      dateCompleted: data.dateCompleted.toDate(),
+      dateCompleted: data.dateCompleted ? (data.dateCompleted.toDate ? data.dateCompleted.toDate() : new Date(data.dateCompleted)) : new Date(),
     } as TestAttempt;
   });
 };
@@ -114,7 +114,7 @@ export const getTestAttempt = async (userId: string, testId: string): Promise<Te
   return {
     id: docSnap.id,
     ...data,
-    dateCompleted: data.dateCompleted.toDate(),
+    dateCompleted: data.dateCompleted ? (data.dateCompleted.toDate ? data.dateCompleted.toDate() : new Date(data.dateCompleted)) : new Date(),
   } as TestAttempt;
 };
 

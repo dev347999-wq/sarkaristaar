@@ -119,7 +119,7 @@ export default function TestPlayer() {
       totalMarks: totalPossibleMarks,
       accuracy: correct + incorrect > 0 ? Math.round((correct / (correct+incorrect)) * 100) : 0,
       timeSpentStr: `${Math.floor((getTimeLimit((test as any).categoryId) - timeLeft)/60)}m ${(getTimeLimit((test as any).categoryId) - timeLeft)%60}s`,
-      answers: answers,
+      answers: Object.fromEntries(Object.entries(answers).map(([k, v]) => [String(k), v])),
       language: selectedLanguage || 'english'
     };
     
@@ -512,7 +512,7 @@ export default function TestPlayer() {
                </div>
 
                <button 
-                 onClick={() => router.push(`/mock-tests/${decodeURIComponent(params.id as string)}/analysis`)}
+                 onClick={() => router.push(`/mock-tests/${encodeURIComponent(decodeURIComponent(params.id as string))}/analysis`)}
                  className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm uppercase tracking-widest hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-4"
                >
                  View Detailed Analysis <ChevronRight className="w-4 h-4" />
