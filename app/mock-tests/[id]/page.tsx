@@ -195,7 +195,24 @@ export default function TestPlayer() {
     </div>;
   }
 
-  const questions = test.questionsData;
+  const questions: any[] = test.questionsData || [];
+
+  // Guard: if no questions were loaded (e.g. subcollection fetch issue or old empty doc)
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6 text-center">
+        <AlertCircle className="w-10 h-10 text-amber-500" />
+        <h2 className="text-xl font-bold">No Questions Found</h2>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          This test has no questions loaded. The admin may need to re-upload the question file.
+        </p>
+        <button onClick={() => router.push('/mock-tests')} className="text-primary hover:underline font-semibold">
+          ← Back to Tests
+        </button>
+      </div>
+    );
+  }
+
   const currentQ = questions[currentQIndex];
 
   // 1. Language Selection Screen

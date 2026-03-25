@@ -245,14 +245,39 @@ export const getMockTest = async (testId: string) => {
   if (!testId) return null;
   const testRef = doc(db, "mock_tests", testId);
   const docSnap = await getDoc(testRef);
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() };
+  if (!docSnap.exists()) return null;
+
+  const data = docSnap.data();
+
+  // New chunked format: questions stored in subcollection
+  const chunksRef = collection(db, "mock_tests", testId, "questions");
+  const chunksSnap = await getDocs(chunksRef);
+
+  if (!chunksSnap.empty) {
+    // Sort chunks by their numeric index and flatten
+    const sortedChunks = chunksSnap.docs
+      .sort((a, b) => {
+        const aIdx = parseInt(a.id.replace('chunk-', '')) || 0;
+        const bIdx = parseInt(b.id.replace('chunk-', '')) || 0;
+        return aIdx - bIdx;
+      });
+    const questionsData = sortedChunks.flatMap(c => c.data().questions || []);
+    return { id: docSnap.id, ...data, questionsData };
   }
-  return null;
+
+  // Legacy flat format: questions embedded in main doc
+  return { id: docSnap.id, ...data };
 };
 
 export const deleteMockTest = async (testId: string) => {
   if (!testId) throw new Error("Test ID is required");
+  
+  // Delete subcollection question chunks first
+  const chunksRef = collection(db, "mock_tests", testId, "questions");
+  const chunksSnap = await getDocs(chunksRef);
+  await Promise.all(chunksSnap.docs.map(d => deleteDoc(d.ref)));
+  
+  // Then delete the main document
   const testRef = doc(db, "mock_tests", testId);
   await deleteDoc(testRef);
 };

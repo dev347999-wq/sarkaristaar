@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Upload, FileJson, AlertCircle, CheckCircle2, Link as LinkIcon, FileSpreadsheet, Lock, Unlock, Search } from "lucide-react";
-import { doc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, Timestamp, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions } from "@/lib/firestore";
@@ -54,7 +54,7 @@ export default function AdminPage() {
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error" | "locking">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [processStep, setProcessStep] = useState("");
-  const [uploadLanguage, setUploadLanguage] = useState<"english" | "hindi" | "bilingual">("english");
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
@@ -104,6 +104,7 @@ export default function AdminPage() {
     try {
       setStatus("uploading");
       setErrorMessage("");
+      setUploadProgress(null);
       
       let parsedData: any[] = [];
       
@@ -166,6 +167,8 @@ export default function AdminPage() {
           
           setProcessStep(`Uploading ${images.length} images to Firebase...`);
           
+          // Build blobs first, then upload ALL in parallel for speed
+          const uploadTasks: { cellKey: string; blob: Blob; ext: string }[] = [];
           for (const img of images) {
             const image = workbook.getImage(Number(img.imageId));
             if (!image || !img.range) continue;
@@ -183,19 +186,25 @@ export default function AdminPage() {
                blob = new Blob([new Uint8Array(byteNumbers)], { type: (image.extension === 'png' ? 'image/png' : 'image/jpeg') });
             } else continue;
 
-            // Upload to Firebase Storage
-            const fileRef = ref(storage, `test-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${image.extension}`);
-            await uploadBytes(fileRef, blob);
-            const downloadUrl = await getDownloadURL(fileRef);
-
             // Map to cell (1-indexed for row/col)
             const rowIdx = Math.floor(img.range.tl.row) + 1;
             const colIdx = Math.floor(img.range.tl.col) + 1;
             const cellKey = `${rowIdx}-${colIdx}`;
-            
+            uploadTasks.push({ cellKey, blob, ext: image.extension || 'png' });
+          }
+
+          // Upload all images in parallel with progress tracking
+          let doneCount = 0;
+          setUploadProgress({ done: 0, total: uploadTasks.length });
+          await Promise.all(uploadTasks.map(async ({ cellKey, blob, ext }) => {
+            const fileRef = ref(storage, `test-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`);
+            await uploadBytes(fileRef, blob);
+            const downloadUrl = await getDownloadURL(fileRef);
             if (!imageMap[cellKey]) imageMap[cellKey] = [];
             imageMap[cellKey].push(downloadUrl);
-          }
+            doneCount++;
+            setUploadProgress({ done: doneCount, total: uploadTasks.length });
+          }));
 
           // 2. Extract Data from rows
           const rows: any[] = [];
@@ -246,16 +255,20 @@ export default function AdminPage() {
         throw new Error("No valid questions found in the provided data. Please ensure it has headers and rows.");
       }
 
-      // Filter out completely empty rows that might be at the bottom of a spreadsheet
-      // Check for any of the common question header variations
+      // Filter out empty rows — scan all keys for any 'question' column (but not image)
       parsedData = parsedData.filter((q: any) => {
         if (!q) return false;
-        const qText = q.question || q['question (en)'] || q['question (hi)'] || q['question_hindi'] || "";
-        return String(qText).trim() !== "";
+        // dynamically find any key that looks like a question column
+        const questionKey = Object.keys(q).find(k => {
+          const lk = k.toLowerCase();
+          return lk.includes('question') && !lk.includes('image');
+        });
+        if (!questionKey) return false;
+        return String(q[questionKey] || "").trim() !== "";
       });
 
       if (parsedData.length === 0) {
-        throw new Error("No valid question columns found. Ensure your headers match: question, question (EN), or question (HI).");
+        throw new Error("No valid question columns found. Make sure your Excel has columns named: Question(english) or Question(hindi).");
       }
 
       // Helper to find a key in an object regardless of minor variations
@@ -271,40 +284,135 @@ export default function AdminPage() {
       };
 
       setProcessStep("Mapping questions (fuzzy logic)...");
+
+      // Helper to find a value by exact lowercased key (for Option A/B/C/D style headers)
+      const findExact = (row: any, key: string) => {
+        const found = Object.keys(row).find(k => k.toLowerCase().trim() === key.toLowerCase());
+        return found ? row[found] : undefined;
+      };
+
       parsedData = parsedData.map((row: any) => {
-        // Find English fields
-        const question = findValue(row, ['question'], ['hi', 'hindi', '(hi)']);
-        const option1 = findValue(row, ['option', '1'], ['hi', 'hindi', '(hi)']);
-        const option2 = findValue(row, ['option', '2'], ['hi', 'hindi', '(hi)']);
-        const option3 = findValue(row, ['option', '3'], ['hi', 'hindi', '(hi)']);
-        const option4 = findValue(row, ['option', '4'], ['hi', 'hindi', '(hi)']);
-        const answer = findValue(row, ['correct'], ['hi', 'hindi', '(hi)']) || findValue(row, ['answer'], ['hi', 'hindi', '(hi)']);
-        const explanation = findValue(row, ['solution'], ['hi', 'hindi', '(hi)']) || findValue(row, ['explanation'], ['hi', 'hindi', '(hi)']);
+        // ── English Question ─────────────────────────────────────────────
+        // Supports: "Question(english)", "Question (english)", "Question(en)", "question"
+        const question =
+          findExact(row, 'question(english)') ||
+          findExact(row, 'question (english)') ||
+          findExact(row, 'question(en)') ||
+          findValue(row, ['question'], ['hi', 'hindi', '(hi)', 'image']);
 
-        // Find Hindi fields
-        const questionHindi = findValue(row, ['question', 'hi']) || findValue(row, ['question', 'hindi']) || findValue(row, ['question', '(hi)']);
-        const option1Hindi = findValue(row, ['option', '1', 'hi']) || findValue(row, ['option', '1', 'hindi']) || findValue(row, ['option', '1', '(hi)']);
-        const option2Hindi = findValue(row, ['option', '2', 'hi']) || findValue(row, ['option', '2', 'hindi']) || findValue(row, ['option', '2', '(hi)']);
-        const option3Hindi = findValue(row, ['option', '3', 'hi']) || findValue(row, ['option', '3', 'hindi']) || findValue(row, ['option', '3', '(hi)']);
-        const option4Hindi = findValue(row, ['option', '4', 'hi']) || findValue(row, ['option', '4', 'hindi']) || findValue(row, ['option', '4', '(hi)']);
-        const answerHindi = findValue(row, ['correct', 'hi']) || findValue(row, ['correct', 'hindi']) || findValue(row, ['answer', 'hi']) || findValue(row, ['answer', 'hindi']);
-        const explanationHindi = findValue(row, ['solution', 'hi']) || findValue(row, ['solution', 'hindi']) || findValue(row, ['explanation', 'hi']) || findValue(row, ['explanation', 'hindi']);
+        // ── English Options ──────────────────────────────────────────────
+        // Supports "Option A", "Option A (hindi)" excluded by exact match first
+        const option1 =
+          findExact(row, 'option a') ||
+          findExact(row, 'option(a)') ||
+          findValue(row, ['option', '1'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['option', 'a'], ['hi', 'hindi', '(hi)']);
+        const option2 =
+          findExact(row, 'option b') ||
+          findExact(row, 'option(b)') ||
+          findValue(row, ['option', '2'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['option', 'b'], ['hi', 'hindi', '(hi)']);
+        const option3 =
+          findExact(row, 'option c') ||
+          findExact(row, 'option(c)') ||
+          findValue(row, ['option', '3'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['option', 'c'], ['hi', 'hindi', '(hi)']);
+        const option4 =
+          findExact(row, 'option d') ||
+          findExact(row, 'option(d)') ||
+          findValue(row, ['option', '4'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['option', 'd'], ['hi', 'hindi', '(hi)']);
 
-        // Images (Fuzzy Match for Question Image and Answer Image)
-        const questionImage = findValue(row, ['question', 'image']);
-        const answerImage = findValue(row, ['answer', 'image']) || findValue(row, ['solution', 'image']);
+        // ── Answer & Explanation (English) ──────────────────────────────
+        const answer =
+          findValue(row, ['correct'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['answer'], ['hi', 'hindi', '(hi)', 'image']);
+        const explanation =
+          findExact(row, 'explanation') ||
+          findValue(row, ['solution'], ['hi', 'hindi', '(hi)']) ||
+          findValue(row, ['explanation'], ['hi', 'hindi', '(hi)']);
 
+        // ── Hindi Question ───────────────────────────────────────────────
+        // Supports: "Question(hindi)", "Question (hindi)", "Question(hi)"
+        const questionHindi =
+          findExact(row, 'question(hindi)') ||
+          findExact(row, 'question (hindi)') ||
+          findExact(row, 'question(hi)') ||
+          findValue(row, ['question', 'hi']) ||
+          findValue(row, ['question', 'hindi']) ||
+          findValue(row, ['question', '(hi)']);
+
+        // ── Hindi Options ────────────────────────────────────────────────
+        // NEW headers: "Option A (hindi)", "Option B (hindi)", "Option C (hindi)", "Option D (hindi)"
+        const option1Hindi =
+          findExact(row, 'option a (hindi)') ||
+          findExact(row, 'option a(hindi)') ||
+          findExact(row, 'option a (hi)') ||
+          findValue(row, ['option', 'a', 'hindi']) ||
+          findValue(row, ['option', '1', 'hi']) ||
+          findValue(row, ['option', '1', 'hindi']);
+        const option2Hindi =
+          findExact(row, 'option b (hindi)') ||
+          findExact(row, 'option b(hindi)') ||
+          findExact(row, 'option b (hi)') ||
+          findValue(row, ['option', 'b', 'hindi']) ||
+          findValue(row, ['option', '2', 'hi']) ||
+          findValue(row, ['option', '2', 'hindi']);
+        const option3Hindi =
+          findExact(row, 'option c (hindi)') ||
+          findExact(row, 'option c(hindi)') ||
+          findExact(row, 'option c (hi)') ||
+          findValue(row, ['option', 'c', 'hindi']) ||
+          findValue(row, ['option', '3', 'hi']) ||
+          findValue(row, ['option', '3', 'hindi']);
+        const option4Hindi =
+          findExact(row, 'option d (hindi)') ||
+          findExact(row, 'option d(hindi)') ||
+          findExact(row, 'option d (hi)') ||
+          findValue(row, ['option', 'd', 'hindi']) ||
+          findValue(row, ['option', '4', 'hi']) ||
+          findValue(row, ['option', '4', 'hindi']);
+
+        // ── Answer & Explanation (Hindi) ─────────────────────────────────
+        const answerHindi =
+          findValue(row, ['correct', 'hi']) ||
+          findValue(row, ['correct', 'hindi']) ||
+          findValue(row, ['answer', 'hi']) ||
+          findValue(row, ['answer', 'hindi']);
+        const explanationHindi =
+          findExact(row, 'explanation (hindi)') ||
+          findExact(row, 'explanation(hindi)') ||
+          findExact(row, 'explanation (hi)') ||
+          findValue(row, ['solution', 'hi']) ||
+          findValue(row, ['solution', 'hindi']) ||
+          findValue(row, ['explanation', 'hi']) ||
+          findValue(row, ['explanation', 'hindi']);
+
+        // ── Images ───────────────────────────────────────────────────────
+        const questionImage =
+          findExact(row, 'question(image)') ||
+          findExact(row, 'question image') ||
+          findValue(row, ['question', 'image']);
+        const answerImage =
+          findExact(row, 'answer(image)') ||
+          findExact(row, 'answer image') ||
+          findExact(row, 'solution(image)') ||
+          findExact(row, 'solution image') ||
+          findValue(row, ['answer', 'image']) ||
+          findValue(row, ['solution', 'image']);
+
+        // Always save BOTH English and Hindi — students see their chosen language at test time
         return {
           id: row.id || row._id || row['questions id'] || "",
-          question: uploadLanguage === "hindi" ? "" : (question || ""),
-          question_hindi: uploadLanguage === "english" ? "" : (questionHindi || (uploadLanguage === "hindi" ? question : "")),
-          options: uploadLanguage === "hindi" ? ["","","",""] : [option1 || "", option2 || "", option3 || "", option4 || ""],
-          options_hindi: uploadLanguage === "english" ? ["","","",""] : [option1Hindi || "", option2Hindi || "", option3Hindi || "", option4Hindi || ""],
-          answer: uploadLanguage === "hindi" ? "" : (answer || ""),
-          answer_hindi: uploadLanguage === "english" ? "" : (answerHindi || (uploadLanguage === "hindi" ? answer : "")),
+          question: question || "",
+          question_hindi: questionHindi || "",
+          options: [option1 || "", option2 || "", option3 || "", option4 || ""],
+          options_hindi: [option1Hindi || "", option2Hindi || "", option3Hindi || "", option4Hindi || ""],
+          answer: answer || "",
+          answer_hindi: answerHindi || "",
           topic: row.topic || row.subject || "",
-          explanation: uploadLanguage === "hindi" ? "" : (explanation || ""),
-          explanation_hindi: uploadLanguage === "english" ? "" : (explanationHindi || (uploadLanguage === "hindi" ? explanation : "")),
+          explanation: explanation || "",
+          explanation_hindi: explanationHindi || "",
           imageUrl: questionImage || "",
           solutionImageUrl: answerImage || ""
         };
@@ -331,30 +439,48 @@ export default function AdminPage() {
       // Sanitize data for Firestore (removes any `undefined` properties that PapaParse might leak, which Firestore rejects)
       const sanitizedData = JSON.parse(JSON.stringify(parsedData));
 
-      // 1. Save questions payload
+      // 1. Save questions payload — chunked subcollection to bypass Firestore 1MB limit
       setProcessStep("Saving to Firestore database...");
-      
-      let savePromise;
+
+      let savePromise: Promise<any>;
       if (uploadTarget === "practice") {
         const subjectSlug = selectedPracticeSubject.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const topicSlug = selectedPracticeTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         savePromise = uploadPracticeQuestions(subjectSlug, topicSlug, sanitizedData);
       } else {
-        const testRef = doc(db, "mock_tests", testId);
-        savePromise = setDoc(testRef, {
-          categoryId: selectedCategory,
-          testNumber: testNumber,
-          testName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
-          paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
-          uploadedAt: Timestamp.now(),
-          questionCount: sanitizedData.length,
-          isLocked: true, // Upload as explicitly locked (Draft mode) by default
-          questionsData: sanitizedData 
-        });
+        const CHUNK_SIZE = 25; // 25 questions per Firestore sub-document (~safe for any size)
+        savePromise = (async () => {
+          const testRef = doc(db, "mock_tests", testId);
+
+          // Step A: Write metadata to main doc (no questionsData here)
+          await setDoc(testRef, {
+            categoryId: selectedCategory,
+            testNumber: testNumber,
+            testName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
+            paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
+            uploadedAt: Timestamp.now(),
+            questionCount: sanitizedData.length,
+            isLocked: true,
+          });
+
+          // Step B: Delete old question chunks (re-upload scenario)
+          const existingChunksSnap = await getDocs(collection(db, "mock_tests", testId, "questions"));
+          await Promise.all(existingChunksSnap.docs.map(d => deleteDoc(d.ref)));
+
+          // Step C: Write new question chunks in parallel
+          const totalChunks = Math.ceil(sanitizedData.length / CHUNK_SIZE);
+          const chunkWrites = Array.from({ length: totalChunks }, (_, i) => {
+            const chunkData = sanitizedData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+            const chunkRef = doc(db, "mock_tests", testId, "questions", `chunk-${i}`);
+            return setDoc(chunkRef, { questions: chunkData, chunkIndex: i });
+          });
+          setProcessStep(`Saving ${totalChunks} question chunks...`);
+          await Promise.all(chunkWrites);
+        })();
       }
-      
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Firestore save timed out. Please check if your Firestore Database is created and enabled in your Firebase console.")), 15000)
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Firestore save timed out. Please check if your Firestore Database is created and enabled in your Firebase console.")), 60000)
       );
 
       await Promise.race([savePromise, timeoutPromise]);
@@ -363,6 +489,7 @@ export default function AdminPage() {
       setStatus("success");
       setJsonInput("");
       setTestName("");
+      setUploadProgress(null);
       await fetchUploads(); // Refresh the grid
       
       setTimeout(() => {
@@ -374,6 +501,7 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error("Upload failed with error payload:", error);
       setStatus("error");
+      setUploadProgress(null);
       
       let msg = error.message || "Failed to upload test series questions.";
       
@@ -666,7 +794,7 @@ export default function AdminPage() {
                 onClick={() => setUploadMode("csv-file")}
                 className={`pb-2 px-4 text-sm font-semibold transition-colors ${uploadMode === "csv-file" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
               >
-                <div className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4" /> CSV File Upload</div>
+                <div className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4" /> Excel / CSV Upload</div>
               </button>
             </div>
 
@@ -698,51 +826,24 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="bg-muted/30 p-4 rounded-lg border border-border space-y-3">
-               <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select File Language Content</label>
-               <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="uploadLang" 
-                      checked={uploadLanguage === 'english'} 
-                      onChange={() => setUploadLanguage('english')}
-                      className="w-4 h-4 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors">English Only</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="uploadLang" 
-                      checked={uploadLanguage === 'hindi'} 
-                      onChange={() => setUploadLanguage('hindi')}
-                      className="w-4 h-4 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors">Hindi Only</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer group">
-                    <input 
-                      type="radio" 
-                      name="uploadLang" 
-                      checked={uploadLanguage === 'bilingual'} 
-                      onChange={() => setUploadLanguage('bilingual')}
-                      className="w-4 h-4 text-primary focus:ring-primary"
-                    />
-                    <span className="text-sm font-medium group-hover:text-primary transition-colors">Bilingual (Mixed)</span>
-                  </label>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-lg flex items-start gap-3">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+               <div>
+                 <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Bilingual Upload Mode</p>
+                 <p className="text-xs text-muted-foreground mt-0.5">
+                   All Excel files are treated as <strong>Bilingual</strong>. Both English and Hindi columns will be saved. Students will see their chosen language automatically during the test.
+                 </p>
+                 <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted/40 px-2 py-1 rounded">
+                   Required headers: <strong>ID · Question(hindi) · Question(english) · Option A · Option A (hindi) · Option B · Option B (hindi) · Option C · Option C (hindi) · Option D · Option D (hindi) · Answer · Explanation · Explanation (hindi) · Question(image) · Answer(image)</strong>
+                 </p>
                </div>
-               <p className="text-[10px] text-muted-foreground italic">
-                 {uploadLanguage === 'hindi' ? "Note: Using 'Hindi Only' will map the 'question' column in your file to Hindi fields." : 
-                  uploadLanguage === 'english' ? "Note: Questions will only show for learners choosing English." : 
-                  "Note: Your file must contain both English and Hindi columns (e.g. question, question_hindi)."}
-               </p>
             </div>
 
             {uploadMode === "csv-file" && (
               <div className="space-y-4 animate-in fade-in duration-300">
                  <div className="space-y-2">
-                  <label className="text-sm font-semibold">Upload CSV File</label>
+                  <label className="text-sm font-semibold">Upload Excel / CSV File</label>
+                  <p className="text-xs text-muted-foreground">Supports <strong>.xlsx</strong> (Excel) and <strong>.csv</strong>. Excel headers: <code>ID, Question(hindi), Question(english), Option A, Option B, Option C, Option D, Answer, Explanation, Question(image), Answer(image)</code>.</p>
                   <input
                     type="file"
                     accept=".csv,.xlsx,.xls"
@@ -757,6 +858,37 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+
+          {/* Upload Progress UI */}
+          {status === "uploading" && uploadProgress && uploadProgress.total > 0 && (
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl space-y-3 animate-in fade-in duration-300">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                  <span className="text-sm font-bold text-primary">Uploading Images to Firebase</span>
+                </div>
+                <span className="text-sm font-black tabular-nums text-primary">
+                  {Math.round((uploadProgress.done / uploadProgress.total) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-primary/10 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground font-medium">
+                {uploadProgress.done} of {uploadProgress.total} images uploaded
+              </p>
+            </div>
+          )}
+
+          {status === "uploading" && !uploadProgress && processStep && (
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center gap-3 animate-in fade-in duration-300">
+              <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin flex-shrink-0" />
+              <span className="text-sm font-semibold text-primary">{processStep}</span>
+            </div>
+          )}
 
           {status === "error" && (
             <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-lg flex items-start gap-3">
@@ -788,7 +920,7 @@ export default function AdminPage() {
               className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 min-w-[140px] justify-center h-10 px-6 rounded-md text-sm font-bold transition-colors disabled:opacity-70"
             >
               {status === "uploading" ? (
-                <><div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" /> {processStep || "Processing..."}</>
+                <><div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" /> {uploadProgress ? `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}% Done` : (processStep || "Processing...")}</>
               ) : (
                 <><Upload className="w-4 h-4" /> Upload Data Only</>
               )}

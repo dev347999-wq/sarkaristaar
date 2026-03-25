@@ -76,7 +76,24 @@ export default function TestAnalysis() {
     );
   }
 
-  const questions = test.questionsData;
+  const questions: any[] = test.questionsData || [];
+
+  // Guard: if no questions were loaded
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6 text-center">
+        <AlertCircle className="w-10 h-10 text-amber-500" />
+        <h2 className="text-xl font-bold">No Questions Found</h2>
+        <p className="text-muted-foreground text-sm max-w-sm">
+          Detailed question data is missing for this test analysis.
+        </p>
+        <button onClick={() => router.push('/mock-tests')} className="text-primary hover:underline font-semibold">
+          ← Back to Tests
+        </button>
+      </div>
+    );
+  }
+
   const currentQ = questions[currentQIndex];
   // Parse the answers object (fallback for older DB entries before adding the field)
   const answers = attempt.answers || {};

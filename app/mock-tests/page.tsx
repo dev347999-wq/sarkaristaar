@@ -363,6 +363,8 @@ export default function MockTestsPage() {
                 packagePrice={!test.isFree && !isCategoryUnlocked ? PACKAGE_PRICING[mainCategory].price : undefined}
                 packageName={PACKAGE_PRICING[mainCategory].name}
                 onStart={() => router.push(`/mock-tests/${test.id}`)}
+                onAnalysis={() => router.push(`/mock-tests/${test.id}/analysis`)}
+
                 onPaymentSuccess={() => {
                   const newSet = new Set(userPurchases);
                   newSet.add(PACKAGE_PRICING[mainCategory].name);
