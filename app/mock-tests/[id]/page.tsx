@@ -52,7 +52,9 @@ export default function TestPlayer() {
 
   const toggleSave = async () => {
     if (!user || !test || isSaving) return;
-    const q = test.questionsData[currentQIndex];
+    const questions = test.questionsData || [];
+    if (questions.length === 0 || !questions[currentQIndex]) return;
+    const q = questions[currentQIndex];
     const questionId = q.id || `mock-${test.id}-${currentQIndex}`;
     const isAlreadySaved = savedItemIds.includes(questionId);
     
@@ -135,6 +137,7 @@ export default function TestPlayer() {
   };
 
   const getTimeLimit = (category: string) => {
+    if (!category) return 60 * 60;
     if (category.includes("Tier 2") || category.includes("CBT 2")) return 120 * 60; // 2 hours
     if (category.includes("Tier 1") || category.includes("CBT 1") || category.includes("Previous")) return 60 * 60; // 1 hour
     return 60 * 60;
@@ -406,7 +409,7 @@ export default function TestPlayer() {
               {selectedLanguage === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
             </p>
 
-            {currentQ.imageUrl && (
+            {currentQ.imageUrl && currentQ.imageUrl.trim() !== "" && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={currentQ.imageUrl} alt="Question figure" className="w-full max-h-[300px] object-contain bg-muted/30" />

@@ -100,7 +100,9 @@ export default function TestAnalysis() {
 
   const toggleSave = async () => {
     if (!user || !test || isSaving) return;
-    const q = test.questionsData[currentQIndex];
+    const questions = test.questionsData || [];
+    if (questions.length === 0 || !questions[currentQIndex]) return;
+    const q = questions[currentQIndex];
     const questionId = q.id || `mock-${test.id}-${currentQIndex}`;
     const isAlreadySaved = savedItemIds.includes(questionId);
     
@@ -216,7 +218,7 @@ export default function TestAnalysis() {
               {attempt.language === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
             </p>
 
-            {currentQ.imageUrl && (
+            {currentQ.imageUrl && currentQ.imageUrl.trim() !== "" && (
               <div className="mb-8 rounded-xl overflow-hidden border border-border bg-muted/30 p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={currentQ.imageUrl} alt="Question figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
@@ -257,7 +259,7 @@ export default function TestAnalysis() {
                 <CheckCircle2 className="w-5 h-5" /> Detailed Explanation
               </div>
               
-              {currentQ.solutionImageUrl && (
+              {currentQ.solutionImageUrl && currentQ.solutionImageUrl.trim() !== "" && (
                 <div className="mb-4 rounded-lg overflow-hidden border border-primary/10 bg-white dark:bg-slate-900 p-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={currentQ.solutionImageUrl} alt="Solution figure" className="max-w-full max-h-[400px] mx-auto object-contain" />
