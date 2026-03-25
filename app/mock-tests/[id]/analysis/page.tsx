@@ -6,6 +6,15 @@ import { useAuth } from "@/context/AuthContext";
 import { getMockTest, getTestAttempt, saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
 import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ChevronLeft, BarChart3, Clock, Target, BookmarkPlus } from "lucide-react";
 
+// Helper: safely extract a string from data that might be a {richText} object
+const safeText = (val: any): string => {
+  if (val == null) return "";
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object' && val.richText) return String(val.richText);
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+};
+
 export default function TestAnalysis() {
   const params = useParams();
   const router = useRouter();
@@ -186,7 +195,7 @@ export default function TestAnalysis() {
               
               <div className="flex items-center gap-3">
                 <div className="text-sm font-semibold px-3 py-1 bg-muted rounded-md text-muted-foreground">
-                  {currentQ.topic || test.categoryId}
+                  {safeText(currentQ?.topic) || safeText(test?.categoryId)}
                 </div>
                 <button 
                   onClick={toggleSave} 
@@ -224,8 +233,8 @@ export default function TestAnalysis() {
 
             <p className="text-lg font-medium mb-8 leading-relaxed whitespace-pre-wrap">
               {attempt?.language === 'hindi' 
-                ? (currentQ?.question_hindi || currentQ?.question || "No question text") 
-                : (currentQ?.question || "No question text")}
+                ? safeText(currentQ?.question_hindi || currentQ?.question || "No question text") 
+                : safeText(currentQ?.question || "No question text")}
             </p>
 
             {currentQ?.imageUrl && String(currentQ.imageUrl).trim() !== "" && (
@@ -236,12 +245,12 @@ export default function TestAnalysis() {
             )}
 
             <div className="space-y-3">
-              {(attempt?.language === 'hindi' && currentQ?.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : (currentQ?.options || [])).map((option: string, i: number) => {
+              {(attempt?.language === 'hindi' && currentQ?.options_hindi?.some((o: any) => safeText(o)) ? currentQ.options_hindi : (currentQ?.options || [])).map((option: any, i: number) => {
                 const currentLetter = ["A", "B", "C", "D"][i];
                 const uAnswerLetter = answers[currentQIndex]; 
                 const isSelected = uAnswerLetter === currentLetter;
                 // Safe access to answer
-                const correctLetter = (currentQ?.answer || "").toString().trim().toUpperCase();
+                const correctLetter = safeText(currentQ?.answer).trim().toUpperCase();
                 const isCorrectOption = currentLetter === correctLetter;
                 
                 let btnStyle = "bg-muted/30 border-transparent opacity-60";
@@ -258,7 +267,7 @@ export default function TestAnalysis() {
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between ${btnStyle}`}
                   >
                     <div>
-                      <span className="font-bold mr-3">{currentLetter}.</span> {option}
+                      <span className="font-bold mr-3">{currentLetter}.</span> {safeText(option)}
                     </div>
                     {isCorrectOption && <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
                     {isSelected && !isCorrectOption && <AlertCircle className="w-5 h-5 text-destructive" />}
@@ -280,7 +289,7 @@ export default function TestAnalysis() {
               )}
 
               <p className="text-sm font-medium whitespace-pre-wrap">
-                 {(attempt?.language === 'hindi' ? (currentQ?.explanation_hindi || currentQ?.explanation) : currentQ?.explanation) || "No explanation provided."}
+                 {safeText(attempt?.language === 'hindi' ? (currentQ?.explanation_hindi || currentQ?.explanation) : currentQ?.explanation) || "No explanation provided."}
               </p>
             </div>
           </div>
@@ -313,7 +322,7 @@ export default function TestAnalysis() {
               const uAnswerLetter = answers[i];
               const isAttempted = !!uAnswerLetter;
               const qData = questions[i] || {};
-              const correctLetter = (qData?.answer || "").toString().trim().toUpperCase();
+              const correctLetter = safeText(qData?.answer).trim().toUpperCase();
               const isCorrect = isAttempted && uAnswerLetter === correctLetter;
               
               let style = "";
