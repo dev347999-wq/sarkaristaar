@@ -107,8 +107,7 @@ const TEST_CATEGORIES = {
     ],
     totalQs: 120,
     totalMarks: 120,
-    negative: "-0.33 Marks (1/3rd)",
-    testCount: 100
+    negative: "-0.33 Marks (1/3rd)"
   },
   "Agniveer Army GD": {
     config: { duration: "60 Mins", questions: "50", marks: "100", demoScore: "72/100" },
@@ -120,8 +119,7 @@ const TEST_CATEGORIES = {
     ],
     totalQs: 50,
     totalMarks: 100,
-    negative: "-0.50 Marks",
-    testCount: 50
+    negative: "-0.50 Marks"
   },
   "Agniveer Army Clerk": {
     config: { duration: "60 Mins", questions: "50", marks: "200", demoScore: "156/200" },
@@ -134,8 +132,7 @@ const TEST_CATEGORIES = {
     ],
     totalQs: 50,
     totalMarks: 200,
-    negative: "-1.00 Marks",
-    testCount: 50
+    negative: "-1.00 Marks"
   },
   "SSC Previous 2025": {
     config: { duration: "60 Mins", questions: "100", marks: "200", demoScore: "142.5/200" },
@@ -288,7 +285,7 @@ export default function MockTestsPage() {
   const tests = useMemo(
     () => generateTests(
       activeCategory, 
-      (TEST_CATEGORIES[activeCategory] as any).testCount || 100, 
+      (TEST_CATEGORIES[activeCategory] as any).testCount || 60, 
       TEST_CATEGORIES[activeCategory].config, 
       userAttemptsMap, 
       uploadedTestsMetadata, 
