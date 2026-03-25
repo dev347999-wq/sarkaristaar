@@ -104,18 +104,30 @@ export const getUserTestAttempts = async (userId: string): Promise<TestAttempt[]
 export const getTestAttempt = async (userId: string, testId: string): Promise<TestAttempt | null> => {
   if (!userId || !testId) return null;
   const attemptsRef = collection(db, "users", userId, "test_attempts");
-  const q = query(attemptsRef, where("testId", "==", testId), orderBy("dateCompleted", "desc"), limit(1));
+  // Remove orderBy from query to avoid composite index requirement
+  const q = query(attemptsRef, where("testId", "==", testId));
   const querySnapshot = await getDocs(q);
   
   if (querySnapshot.empty) return null;
   
-  const docSnap = querySnapshot.docs[0];
-  const data = docSnap.data();
-  return {
-    id: docSnap.id,
-    ...data,
-    dateCompleted: data.dateCompleted ? (data.dateCompleted.toDate ? data.dateCompleted.toDate() : new Date(data.dateCompleted)) : new Date(),
-  } as TestAttempt;
+  // Sort in JS to find the latest
+  const attempts = querySnapshot.docs.map(doc => {
+    const data = doc.data();
+    let dateObj: Date;
+    try {
+      dateObj = data.dateCompleted ? (data.dateCompleted.toDate ? data.dateCompleted.toDate() : new Date(data.dateCompleted)) : new Date();
+    } catch (e) {
+      dateObj = new Date();
+    }
+    
+    return {
+      id: doc.id,
+      ...data,
+      dateCompleted: dateObj
+    } as TestAttempt;
+  }).sort((a, b) => b.dateCompleted.getTime() - a.dateCompleted.getTime());
+  
+  return attempts[0];
 };
 
 // -------------------------------------------------------------
