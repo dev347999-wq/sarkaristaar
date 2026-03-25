@@ -33,50 +33,6 @@ export default function TestPlayer() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    const fetchTest = async () => {
-      try {
-        const testId = decodeURIComponent(params.id as string);
-        const [testData, savedQuestions] = await Promise.all([
-          getMockTest(testId),
-          user ? getSavedQuestions(user.uid) : Promise.resolve([])
-        ]);
-
-        if (!testData) {
-          setError("Test not found or not available.");
-          return;
-        }
-        
-        setTest(testData);
-        setSavedItemIds(savedQuestions.map(q => q.questionId));
-        // Default to a 60 min timer for now, real app might read this from config or database mapping
-        setTimeLeft(60 * 60); 
-      } catch (err) {
-        setError("Failed to load the test.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTest();
-  }, [params.id]);
-
-  useEffect(() => {
-    if (loading || !isStarted || isSubmitted || timeLeft <= 0) return;
-    
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [loading, isSubmitted, timeLeft]);
-
   const handleAnswerSelect = (option: string) => {
     if (isSubmitted) return;
     setAnswers(prev => ({
@@ -153,13 +109,13 @@ export default function TestPlayer() {
     const totalPossibleMarks = questions.length * marksPerCorrect;
     
     const resultObj = {
-      testId: test.id,
-      testTitle: `${test.categoryId} Mock ${test.testNumber}`,
-      category: test.categoryId,
+      testId: (test as any).id,
+      testTitle: `${(test as any).categoryId} Mock ${(test as any).testNumber}`,
+      category: (test as any).categoryId,
       score: finalScore,
       totalMarks: totalPossibleMarks,
       accuracy: correct + incorrect > 0 ? Math.round((correct / (correct+incorrect)) * 100) : 0,
-      timeSpentStr: `${Math.floor((3600 - timeLeft)/60)}m ${(3600 - timeLeft)%60}s`,
+      timeSpentStr: `${Math.floor((getTimeLimit((test as any).categoryId) - timeLeft)/60)}m ${(getTimeLimit((test as any).categoryId) - timeLeft)%60}s`,
       answers: answers,
       language: selectedLanguage || 'english'
     };
@@ -177,6 +133,55 @@ export default function TestPlayer() {
       console.error("Failed to save score");
     }
   };
+
+  const getTimeLimit = (category: string) => {
+    if (category.includes("Tier 2") || category.includes("CBT 2")) return 120 * 60; // 2 hours
+    if (category.includes("Tier 1") || category.includes("CBT 1") || category.includes("Previous")) return 60 * 60; // 1 hour
+    return 60 * 60;
+  };
+
+  useEffect(() => {
+    const fetchTest = async () => {
+      try {
+        const testId = decodeURIComponent(params.id as string);
+        const [testData, savedQuestions] = await Promise.all([
+          getMockTest(testId),
+          user ? getSavedQuestions(user.uid) : Promise.resolve([])
+        ]);
+
+        if (!testData) {
+          setError("Test not found or not available.");
+          return;
+        }
+        
+        setTest(testData);
+        setSavedItemIds(savedQuestions.map(q => q.questionId));
+        setTimeLeft(getTimeLimit((testData as any).categoryId)); 
+      } catch (err) {
+        setError("Failed to load the test.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTest();
+  }, [params.id, user]);
+
+  useEffect(() => {
+    if (loading || !isStarted || isSubmitted || timeLeft <= 0) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [loading, isSubmitted, timeLeft]);
 
   if (loading || authLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading Test Engine...</div>;
@@ -458,19 +463,35 @@ export default function TestPlayer() {
           </div>
         </div>
 
-        {/* Sidebar Grid */}
-        <div className="bg-card border border-border rounded-xl p-4 md:p-6 shadow-sm h-fit sticky top-24">
-          
-          {isSubmitted && scoreData && (
-             <div className="mb-6 p-4 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center space-y-2">
+      {/* Sidebar Grid */}
+      <div className="bg-card border border-border rounded-xl p-4 md:p-6 shadow-sm h-fit sticky top-24">
+        
+        {isSubmitted && scoreData && (
+           <div className="mb-6 p-6 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center space-y-4 animate-in zoom-in-95 duration-500">
+               <div className="space-y-1">
                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Final Score</p>
-                 <h2 className="text-4xl font-black text-primary">{scoreData.score}<span className="text-lg text-muted-foreground font-medium">/{scoreData.totalMarks}</span></h2>
-                 <div className="flex justify-center gap-4 text-xs font-medium pt-2">
-                   <span className="text-emerald-600">{scoreData.correct} Correct</span>
-                   <span className="text-destructive">{scoreData.incorrect} Wrong</span>
+                 <h2 className="text-5xl font-black text-primary">{scoreData.score}<span className="text-xl text-muted-foreground font-medium">/{scoreData.totalMarks}</span></h2>
+               </div>
+               
+               <div className="grid grid-cols-2 gap-2 text-xs font-bold pt-2 border-t border-primary/10">
+                 <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
+                   <p className="opacity-70 uppercase tracking-tighter">Correct</p>
+                   <p className="text-lg">{scoreData.correct}</p>
                  </div>
-             </div>
-          )}
+                 <div className="p-2 bg-destructive/10 text-destructive rounded-lg">
+                   <p className="opacity-70 uppercase tracking-tighter">Wrong</p>
+                   <p className="text-lg">{scoreData.incorrect}</p>
+                 </div>
+               </div>
+
+               <button 
+                 onClick={() => router.push(`/mock-tests/${params.id}/analysis`)}
+                 className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-black text-sm uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-4"
+               >
+                 View Detailed Solution <ChevronRight className="w-4 h-4" />
+               </button>
+           </div>
+        )}
 
           <h3 className="font-bold mb-4">Questions</h3>
           <div className="grid grid-cols-5 gap-2">

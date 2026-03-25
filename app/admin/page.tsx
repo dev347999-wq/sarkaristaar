@@ -181,17 +181,17 @@ export default function AdminPage() {
       parsedData = parsedData.map((row: any) => {
         // Since we lowercased headers earlier, we check for 'option a', 'option 1', etc.
         const optionsArray = [
-          row['option1'] || row['option 1'] || row['option a'] || row['option_a'] || row['optionA'] || "",
-          row['option2'] || row['option 2'] || row['option b'] || row['option_b'] || row['optionB'] || "",
-          row['option3'] || row['option 3'] || row['option c'] || row['option_c'] || row['optionC'] || "",
-          row['option4'] || row['option 4'] || row['option d'] || row['option_d'] || row['optionD'] || ""
+          row['options1'] || row['options 1'] || row['option1'] || row['option 1'] || row['option a'] || row['option_a'] || row['optionA'] || "",
+          row['options2'] || row['options 2'] || row['option2'] || row['option 2'] || row['option b'] || row['option_b'] || row['optionB'] || "",
+          row['options3'] || row['options 3'] || row['option3'] || row['option 3'] || row['option c'] || row['option_c'] || row['optionC'] || "",
+          row['options4'] || row['options 4'] || row['option4'] || row['option 4'] || row['option d'] || row['option_d'] || row['optionD'] || ""
         ];
 
         const optionsHindiArray = [
-          row['option1_hindi'] || row['option 1 hindi'] || row['option1 hindi'] || "",
-          row['option2_hindi'] || row['option 2 hindi'] || row['option2 hindi'] || "",
-          row['option3_hindi'] || row['option 3 hindi'] || row['option3 hindi'] || "",
-          row['option4_hindi'] || row['option 4 hindi'] || row['option4 hindi'] || ""
+          row['options1_hindi'] || row['options 1 hindi'] || row['option1_hindi'] || row['option 1 hindi'] || row['option1 hindi'] || "",
+          row['options2_hindi'] || row['options 2 hindi'] || row['option2_hindi'] || row['option 2 hindi'] || row['option2 hindi'] || "",
+          row['options3_hindi'] || row['options 3 hindi'] || row['option3_hindi'] || row['option 3 hindi'] || row['option3 hindi'] || "",
+          row['options4_hindi'] || row['options 4 hindi'] || row['option4_hindi'] || row['option 4 hindi'] || row['option4 hindi'] || ""
         ];
 
         return {
@@ -200,11 +200,11 @@ export default function AdminPage() {
           question_hindi: uploadLanguage === "english" ? "" : (row.question_hindi || row['question hindi'] || (uploadLanguage === "hindi" ? row.question : "")),
           options: uploadLanguage === "hindi" ? ["","","",""] : optionsArray,
           options_hindi: uploadLanguage === "english" ? ["","","",""] : (optionsHindiArray.some(o => o) ? optionsHindiArray : (uploadLanguage === "hindi" ? optionsArray : ["","","",""])),
-          answer: uploadLanguage === "hindi" ? "" : row.answer || "",
-          answer_hindi: uploadLanguage === "english" ? "" : (row.answer_hindi || row['answer hindi'] || (uploadLanguage === "hindi" ? row.answer : "")),
+          answer: uploadLanguage === "hindi" ? "" : (row.answer || row['correct answer'] || row['correct_answer'] || ""),
+          answer_hindi: uploadLanguage === "english" ? "" : (row.answer_hindi || row['answer hindi'] || row['correct answer hindi'] || (uploadLanguage === "hindi" ? row.answer : "")),
           topic: row.topic || "",
-          explanation: uploadLanguage === "hindi" ? "" : row.explanation || "",
-          explanation_hindi: uploadLanguage === "english" ? "" : (row.explanation_hindi || row['explanation hindi'] || (uploadLanguage === "hindi" ? row.explanation : ""))
+          explanation: uploadLanguage === "hindi" ? "" : (row.explanation || row.solution || row['detailed answer'] || ""),
+          explanation_hindi: uploadLanguage === "english" ? "" : (row.explanation_hindi || row['explanation hindi'] || row['solution hindi'] || (uploadLanguage === "hindi" ? row.explanation : ""))
         };
       });
 
