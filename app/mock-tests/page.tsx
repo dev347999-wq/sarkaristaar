@@ -250,11 +250,11 @@ export default function MockTestsPage() {
   useEffect(() => {
     // 1. Fetch which tests actually exist in the database and are UNLOCKED
     getUploadedTestsMetadata().then((metadata) => {
-      const unlockedMetadata = new Map();
-      metadata.filter(m => !m.isLocked).forEach(m => {
-        unlockedMetadata.set(m.id, m);
+      const allMetadata = new Map();
+      metadata.forEach(m => {
+        allMetadata.set(m.id, m);
       });
-      setUploadedTestsMetadata(unlockedMetadata);
+      setUploadedTestsMetadata(allMetadata);
     }).catch(console.error);
 
     // 2. Fetch the user's personal attempts and purchases

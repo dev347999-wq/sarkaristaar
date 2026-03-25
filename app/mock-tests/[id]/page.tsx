@@ -330,16 +330,21 @@ export default function TestPlayer() {
             </div>
           </div>
           
-          <div className="bg-slate-100 p-4 border-t border-slate-200 flex justify-between items-center">
-            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium select-none text-slate-700">
-              <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary" id="declare-checkbox" />
-              {isHindi ? "मैंने निर्देशों को पढ़ और समझ लिया है।" : "I have read and understood the instructions."}
+          <div className="bg-slate-100 p-4 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <label className="flex items-center gap-3 cursor-pointer p-3 px-5 rounded-xl bg-white border border-slate-200 shadow-sm hover:border-primary transition-all group select-none">
+              <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary transition-all cursor-pointer" id="declare-checkbox" />
+              <span className="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors">
+                {isHindi ? "मैंने निर्देशों को पढ़ और समझ लिया है।" : "I have read and understood the instructions."}
+              </span>
             </label>
             <button 
               onClick={() => {
                 const cb = document.getElementById('declare-checkbox') as HTMLInputElement;
                 if (!cb.checked) {
-                   alert(isHindi ? "आगे बढ़ने से पहले कृपया नियम और शर्तें स्वीकार करें।" : "Please accept the terms and conditions before proceeding.");
+                   cb.closest('label')?.classList.add('animate-bounce', 'border-destructive', 'bg-destructive/5');
+                   setTimeout(() => {
+                     cb.closest('label')?.classList.remove('animate-bounce', 'border-destructive', 'bg-destructive/5');
+                   }, 1000);
                    return;
                 }
                 setIsStarted(true);

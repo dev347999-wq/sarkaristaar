@@ -460,7 +460,7 @@ export default function AdminPage() {
             paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
             uploadedAt: Timestamp.now(),
             questionCount: sanitizedData.length,
-            isLocked: true,
+            isLocked: false,
           });
 
           // Step B: Delete old question chunks (re-upload scenario)
