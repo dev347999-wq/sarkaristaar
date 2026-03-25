@@ -113,16 +113,22 @@ export function GoogleAuthButton() {
 function getFriendlyError(code: string): string {
   switch (code) {
     case "auth/unauthorized-domain":
-      return "This domain is not authorised for Google Sign-In. Add it in Firebase Console → Authentication → Settings → Authorised domains.";
+      return "CRITICAL: This domain (sarkaristaar.com) is not authorized in Firebase. Add it in Firebase Console -> Authentication -> Settings -> Authorized domains.";
     case "auth/operation-not-allowed":
-      return "Google Sign-In is not enabled. Enable it in Firebase Console → Authentication → Sign-in methods.";
+      return "Google Sign-In is not enabled. Enable it in Firebase Console -> Authentication -> Sign-in methods -> Add Google.";
     case "auth/internal-error":
-      return "An internal error occurred. Please try again.";
+      return "Firebase internal error. Check your API key in .env.local.";
     case "auth/network-request-failed":
-      return "Network error. Please check your connection and try again.";
+      return "Network error. Please check your connection.";
     case "auth/user-disabled":
-      return "This account has been disabled. Please contact support.";
+      return "This account has been disabled.";
+    case "auth/popup-blocked":
+      return "Sign-in popup was blocked. Please allow popups for this site or try again.";
+    case "auth/popup-closed-by-user":
+      return "Sign-in was cancelled (popup closed).";
+    case "auth/configuration-not-found":
+      return "Firebase project configuration error. Check your Firebase settings.";
     default:
-      return `Sign-in failed (${code || "unknown error"}). Please try again.`;
+      return `Sign-in failed. Error code: ${code}. Please ensure this domain is added to Authorized Domains in Firebase.`;
   }
 }
