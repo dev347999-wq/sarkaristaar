@@ -313,6 +313,18 @@ export default function AdminPage() {
         return String(val);
       };
 
+      // Helper: convert Google Drive share links to direct image URLs
+      const toDirectImageUrl = (url: string): string => {
+        if (!url) return '';
+        const s = cellToString(url).trim();
+        if (!s) return '';
+        const driveMatch = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+        const openMatch = s.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+        if (openMatch) return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
+        return s;
+      };
+
       parsedData = parsedData.map((row: any) => {
         // ── English Question ─────────────────────────────────────────────
         // Supports: "Question(english)", "Question (english)", "Question(en)", "question"
@@ -439,8 +451,8 @@ export default function AdminPage() {
           topic: cellToString(row.topic || row.subject || ""),
           explanation: cellToString(explanation),
           explanation_hindi: cellToString(explanationHindi),
-          imageUrl: cellToString(questionImage),
-          solutionImageUrl: cellToString(answerImage)
+          imageUrl: toDirectImageUrl(questionImage),
+          solutionImageUrl: toDirectImageUrl(answerImage)
         };
       });
 
