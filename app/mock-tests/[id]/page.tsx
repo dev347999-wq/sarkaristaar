@@ -54,7 +54,7 @@ export default function TestPlayer() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<"english" | "hindi" | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<"english" | "hindi">("english");
   const [scoreData, setScoreData] = useState<any>(null);
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -217,7 +217,7 @@ export default function TestPlayer() {
     }, 1000);
     
     return () => clearInterval(timer);
-  }, [loading, isSubmitted, timeLeft]);
+  }, [loading, isStarted, isSubmitted, timeLeft]);
 
   if (loading || authLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading Test Engine...</div>;
@@ -249,42 +249,7 @@ export default function TestPlayer() {
     );
   }
 
-  const currentQ = questions[currentQIndex];
-
-  // 1. Language Selection Screen
-  if (!selectedLanguage) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden p-8 space-y-8 animate-in zoom-in-95 duration-300">
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-black text-slate-900">Choose Language</h1>
-            <p className="text-slate-500 font-medium">Select your preferred language for this test</p>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4">
-            <button 
-              onClick={() => setSelectedLanguage("english")}
-              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-primary/5 transition-all group"
-            >
-              <span className="text-2xl font-bold text-slate-800 group-hover:text-primary">English</span>
-              <span className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Standard</span>
-            </button>
-            <button 
-              onClick={() => setSelectedLanguage("hindi")}
-              className="flex flex-col items-center justify-center p-6 rounded-xl border-2 border-slate-100 hover:border-primary hover:bg-primary/5 transition-all group"
-            >
-              <span className="text-2xl font-bold text-slate-800 group-hover:text-primary">हिन्दी (Hindi)</span>
-              <span className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-bold">Recommended</span>
-            </button>
-          </div>
-          
-          <p className="text-[10px] text-center text-slate-400 uppercase font-black tracking-widest">You can't change this once the test starts</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Instructions Screen
+  const currentQ = questions[currentQIndex];  // Instructions Screen (with language selection integrated)
   if (!isStarted) {
     const isHindi = selectedLanguage === "hindi";
     return (
@@ -293,9 +258,21 @@ export default function TestPlayer() {
           
           <div className="bg-slate-800 text-white p-4 flex justify-between items-center">
             <h1 className="text-xl font-bold tracking-wide">{isHindi ? "परीक्षा निर्देश" : "TEST INSTRUCTIONS"}</h1>
-            <button onClick={() => setSelectedLanguage(null)} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">
-              {isHindi ? "← भाषा बदलें" : "← Change Language"}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 mr-1">{isHindi ? "भाषा:" : "Language:"}</span>
+              <button 
+                onClick={() => setSelectedLanguage("english")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${selectedLanguage === 'english' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              >
+                English
+              </button>
+              <button 
+                onClick={() => setSelectedLanguage("hindi")}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${selectedLanguage === 'hindi' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              >
+                हिन्दी
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar text-slate-800">
@@ -306,18 +283,18 @@ export default function TestPlayer() {
                <ol className="list-decimal pl-6 space-y-2">
                  {isHindi ? (
                    <>
-                     <li>घड़ी सर्वर पर सेट की जाएगी। स्क्रीन के ऊपरी दाएं कोने में काउंटडाउन टाइमर परीक्षा पूरी करने के लिए आपके पास उपलब्ध शेष समय प्रदर्शित करेगा। जब टाइमर शून्य पर पहुंच जाएगा, तो परीक्षा अपने आप समाप्त हो जाएगी। आपको अपनी परीक्षा समाप्त या सबमिट करने की आवश्यकता नहीं होगी।</li>
+                     <li>घड़ी सर्वर पर सेट की जाएगी। स्क्रीन के ऊपरी दाएं कोने में काउंटडाउन टाइमर परीक्षा पूरा करने के लिए आपके पास उपलब्ध शेष समय प्रदर्शित करेगा। जब टाइमर शून्य पर पहुंच जाएगा, तो परीक्षा अपने आप समाप्त हो जाएगी।</li>
                      <li>स्क्रीन के दाईं ओर प्रदर्शित प्रश्न पैलेट निम्नलिखित प्रतीकों में से एक का उपयोग करके प्रत्येक प्रश्न की स्थिति दिखाएगा:
                         <ul className="mt-2 space-y-2 list-none mb-4">
                           <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center text-xs">1</div> आपने प्रश्न का उत्तर नहीं दिया है।</li>
                           <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center text-xs">2</div> आपने प्रश्न का उत्तर दे दिया है।</li>
-                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-xs">3</div> आपने प्रश्न का उत्तर नहीं दिया है, लेकिन प्रश्न को समीक्षा के लिए चिह्नित किया है।</li>
+                          <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center text-xs">3</div> आपने प्रश्न को समीक्षा के लिए चिह्नित किया है।</li>
                         </ul>
                      </li>
                    </>
                  ) : (
                    <>
-                     <li>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself. You will not be required to end or submit your examination.</li>
+                     <li>The clock will be set at the server. The countdown timer at the top right corner of screen will display the remaining time available for you to complete the examination. When the timer reaches zero, the examination will end by itself.</li>
                      <li>The Question Palette displayed on the right side of screen will show the status of each question using one of the following symbols:
                         <ul className="mt-2 space-y-2 list-none mb-4">
                           <li className="flex items-center gap-3"><div className="w-6 h-6 rounded bg-muted border border-border flex items-center justify-center text-xs">1</div> You have NOT answered the question.</li>
@@ -335,13 +312,13 @@ export default function TestPlayer() {
                    <ul className="list-[lower-alpha] pl-6 mt-1 space-y-1">
                      {isHindi ? (
                        <>
-                         <li>अपनी स्क्रीन के दाईं ओर प्रश्न पैलेट में प्रश्न संख्या पर क्लिक करें ताकि आप सीधे उस नंबर वाले प्रश्न पर जा सकें। ध्यान दें कि इस विकल्प का उपयोग करने से वर्तमान प्रश्न का आपका उत्तर सुरक्षित नहीं होता है।</li>
-                         <li>वर्तमान प्रश्न के लिए अपना उत्तर सुरक्षित करने और फिर अगले प्रश्न पर जाने के लिए <strong>Next</strong> पर क्लिक करें।</li>
+                         <li>अपनी स्क्रीन के दाईं ओर प्रश्न पैलेट में प्रश्न संख्या पर क्लिक करें।</li>
+                         <li>वर्तमान प्रश्न के लिए अपना उत्तर सुरक्षित करने और अगले प्रश्न पर जाने के लिए <strong>Next</strong> पर क्लिक करें।</li>
                          <li>बाद में इसे देखने के लिए <strong>Mark for Review</strong> पर क्लिक करें।</li>
                        </>
                      ) : (
                        <>
-                         <li>Click on the question number in the Question Palette at the right of your screen to go to that numbered question directly. Note that using this option does NOT save your answer to the current question.</li>
+                         <li>Click on the question number in the Question Palette to go to that question directly.</li>
                          <li>Click on <strong>Next</strong> to save your answer for the current question and then go to the next question.</li>
                          <li>Click on <strong>Mark for Review</strong> to flag it to look at it later.</li>
                        </>
@@ -444,7 +421,7 @@ export default function TestPlayer() {
             </div>
 
             <p className="text-lg md:text-xl font-medium mb-8 leading-relaxed whitespace-pre-wrap">
-              {selectedLanguage === 'hindi' ? (currentQ.question_hindi || currentQ.question) : currentQ.question}
+              {selectedLanguage === 'hindi' ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
             </p>
 
             {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
@@ -455,7 +432,7 @@ export default function TestPlayer() {
             )}
 
             <div className="space-y-3">
-              {(selectedLanguage === 'hindi' && currentQ.options_hindi?.some((o: string) => o) ? currentQ.options_hindi : currentQ.options).map((option: string, i: number) => {
+              {(selectedLanguage === 'hindi' && currentQ.options_hindi?.some((o: any) => o) ? currentQ.options_hindi : currentQ.options).map((option: any, i: number) => {
                 const currentLetter = ["A", "B", "C", "D"][i];
                 const isSelected = answers[currentQIndex] === currentLetter;
                 
@@ -478,18 +455,35 @@ export default function TestPlayer() {
                     key={i}
                     onClick={() => handleAnswerSelect(i)}
                     disabled={isSubmitted}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${btnStyle}`}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-4 group ${btnStyle}`}
                   >
-                    <span className="font-bold mr-3">{currentLetter}.</span> {option}
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold border ${isSelected ? 'bg-primary text-white border-primary' : 'bg-background border-border group-hover:border-primary/50 text-muted-foreground'}`}>
+                      {currentLetter}
+                    </div>
+                    <span className="flex-1">{safeText(option)}</span>
+                    {isSelected && !isSubmitted && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                    {isSubmitted && currentLetter === currentQ.answer.trim().toUpperCase() && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                    {isSubmitted && isSelected && currentLetter !== currentQ.answer.trim().toUpperCase() && <AlertCircle className="w-5 h-5 text-destructive" />}
                   </button>
                 );
               })}
             </div>
             
             {isSubmitted && (selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) && (
-              <div className="mt-8 p-4 bg-primary/5 border border-primary/20 rounded-xl text-sm leading-relaxed">
-                <span className="font-bold text-primary mb-1 block">Explanation:</span>
-                {selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation}
+              <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-xl space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="flex items-center gap-2 text-primary">
+                  <BookOpen className="w-5 h-5" />
+                  <h3 className="font-bold uppercase tracking-wider text-xs">{selectedLanguage === 'hindi' ? "व्याख्या" : "EXPLANATION"}</h3>
+                </div>
+                <div className="text-slate-700 leading-relaxed whitespace-pre-wrap prose prose-slate max-w-none">
+                  {safeText(selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
+                </div>
+                {currentQ.solutionImageUrl && toDirectImageUrl(safeText(currentQ.solutionImageUrl)).startsWith('http') && (
+                  <div className="mt-4 rounded-lg overflow-hidden border border-slate-200 bg-white p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={toDirectImageUrl(safeText(currentQ.solutionImageUrl))} alt="Solution diagram" className="w-full max-h-[400px] object-contain" />
+                  </div>
+                )}
               </div>
             )}
           </div>
