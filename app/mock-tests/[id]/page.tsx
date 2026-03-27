@@ -547,66 +547,76 @@ export default function TestPlayer() {
                   )}
                 </div>
               )}
+
+              {/* 4. Action Navigation Group */}
+              {!isSubmitted && (
+                <div className="pt-8 mt-12 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => {
+                        setMarkedIndices(prev => new Set(prev).add(currentQIndex));
+                        handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1));
+                      }}
+                      className="px-6 py-2 bg-sky-100 text-sky-700 border border-sky-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-sky-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
+                    >
+                      Mark for Review & Next
+                    </button>
+                    <button 
+                      onClick={() => setAnswers(prev => {
+                        const next = { ...prev };
+                        delete next[currentQIndex];
+                        return next;
+                      })}
+                      className="px-6 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
+                    >
+                      Clear Response
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                       <button 
+                        onClick={() => handleNextPrev(Math.max(0, currentQIndex - 1))}
+                        disabled={currentQIndex === 0}
+                        className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold transition-all disabled:opacity-30 flex items-center gap-1"
+                       >
+                        <ChevronLeft className="w-4 h-4" />
+                       </button>
+                       <button 
+                        onClick={() => {
+                           toggleSave();
+                        }}
+                        disabled={isSaving}
+                        className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 border font-bold ${
+                          savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`)
+                            ? 'bg-primary/10 text-primary border-primary/30' 
+                            : 'bg-muted hover:bg-muted/80 border-transparent text-muted-foreground'
+                        }`}
+                       >
+                        <BookmarkPlus className={`w-4 h-4 ${savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`) ? 'fill-primary' : ''}`} />
+                       </button>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        // Fix: remove from marked if user saves answer
+                        if (markedIndices.has(currentQIndex)) {
+                          setMarkedIndices(prev => {
+                            const next = new Set(prev);
+                            next.delete(currentQIndex);
+                            return next;
+                          });
+                        }
+                        handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1));
+                      }}
+                      className="px-8 py-2.5 bg-[#00b2ca] text-white rounded shadow-[0_2px_8px_rgba(0,178,202,0.3)] text-xs font-black uppercase tracking-widest hover:bg-[#009fb5] transition-all hover:translate-y-[-1px] active:translate-y-0"
+                    >
+                      Save & Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* 4. Action Footer Navigation */}
-          {!isSubmitted && (
-            <footer className="h-16 border-t border-slate-200 bg-[#f8fafc] flex items-center justify-between px-6 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => {
-                    setMarkedIndices(prev => new Set(prev).add(currentQIndex));
-                    handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1));
-                  }}
-                  className="px-6 py-2 bg-sky-100 text-sky-700 border border-sky-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-sky-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
-                >
-                  Mark for Review & Next
-                </button>
-                <button 
-                  onClick={() => setAnswers(prev => {
-                    const next = { ...prev };
-                    delete next[currentQIndex];
-                    return next;
-                  })}
-                  className="px-6 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
-                >
-                  Clear Response
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex gap-2">
-                   <button 
-                    onClick={() => handleNextPrev(Math.max(0, currentQIndex - 1))}
-                    disabled={currentQIndex === 0}
-                    className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold transition-all disabled:opacity-30 flex items-center gap-1"
-                   >
-                    <ChevronLeft className="w-4 h-4" />
-                   </button>
-                   <button 
-                    onClick={() => {
-                       toggleSave();
-                    }}
-                    disabled={isSaving}
-                    className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 border font-bold ${
-                      savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`)
-                        ? 'bg-primary/10 text-primary border-primary/30' 
-                        : 'bg-muted hover:bg-muted/80 border-transparent text-muted-foreground'
-                    }`}
-                   >
-                    <BookmarkPlus className={`w-4 h-4 ${savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`) ? 'fill-primary' : ''}`} />
-                   </button>
-                </div>
-                <button 
-                  onClick={() => handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1))}
-                  className="px-8 py-2.5 bg-[#00b2ca] text-white rounded shadow-[0_2px_8px_rgba(0,178,202,0.3)] text-xs font-black uppercase tracking-widest hover:bg-[#009fb5] transition-all hover:translate-y-[-1px] active:translate-y-0"
-                >
-                  Save & Next
-                </button>
-              </div>
-            </footer>
-          )}
         </main>
 
         {/* Right: Sidebar */}
