@@ -198,7 +198,7 @@ export default function TestPlayer() {
     const timeSpentStr = `${Math.floor(timeTakenSeconds / 60)}m ${timeTakenSeconds % 60}s`;
 
     const resultsForDb = {
-      testId: params.id as string,
+      testId: decodeURIComponent(params.id as string),
       testTitle: test.paperName || test.testName || `Mock Test`,
       category: test.categoryId || "General",
       score,
