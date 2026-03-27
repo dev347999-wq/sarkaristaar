@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/firestore";
+import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, getUploadedTestsMetadata, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/firestore";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -26,9 +26,28 @@ export default function DashboardPage() {
         getUserTestAttempts(user.uid),
         getSavedQuestions(user.uid),
         getUserNotes(user.uid),
-        getDetailedPurchases(user.uid)
-      ]).then(([fetchedAttempts, fetchedQuestions, fetchedNotes, fetchedPurchases]) => {
-        setAttempts(fetchedAttempts);
+        getDetailedPurchases(user.uid),
+        getUploadedTestsMetadata()
+      ]).then(([fetchedAttempts, fetchedQuestions, fetchedNotes, fetchedPurchases, testMetadata]) => {
+        // Create lookup for test version timestamps
+        const testMetaMap = new Map();
+        testMetadata.forEach(m => testMetaMap.set(m.id, m));
+        
+        // Filter out stale or deleted test attempts for stats accuracy
+        const validAttempts = fetchedAttempts.filter(att => {
+          const meta = testMetaMap.get(att.testId);
+          if (!meta) return false; // Ignore attempts for non-existent tests
+          
+          if (meta.lastUploadedAt && att.testUploadedAt) {
+            return att.testUploadedAt.seconds >= meta.lastUploadedAt.seconds;
+          }
+          // If the test has a version but attempt doesn't, it's stale
+          if (meta.lastUploadedAt && !att.testUploadedAt) return false;
+          
+          return true; // Fallback for old legacy data without timestamps
+        });
+
+        setAttempts(validAttempts);
         setSavedQuestions(fetchedQuestions);
         setNotes(fetchedNotes);
         if (fetchedPurchases && fetchedPurchases.length > 0) {
