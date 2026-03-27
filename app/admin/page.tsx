@@ -502,6 +502,7 @@ export default function AdminPage() {
             testName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
             paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
             uploadedAt: Timestamp.now(),
+            lastUploadedAt: Timestamp.now(),
             questionCount: sanitizedData.length,
             isLocked: false,
           });

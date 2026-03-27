@@ -206,7 +206,8 @@ export default function TestPlayer() {
       accuracy: accuracyVal,
       timeSpentStr,
       answers,
-      language: selectedLanguage
+      language: selectedLanguage,
+      testUploadedAt: test.lastUploadedAt || null
     };
 
     const resultsForUi = {

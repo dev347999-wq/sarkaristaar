@@ -8,7 +8,7 @@ import { getUserTestAttempts, getUploadedTestsMetadata, getUserPurchases, TestAt
 import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 // Generator for mock tests
-const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestsMetadata: Map<string, {isLocked: boolean, paperName?: string}>, isCategoryUnlocked: boolean) => {
+const generateTests = (prefixKey: string, count: number, config: any, userAttempts: Record<string, TestAttempt>, uploadedTestsMetadata: Map<string, {isLocked: boolean, paperName?: string, lastUploadedAt?: any}>, isCategoryUnlocked: boolean) => {
   const prefixMap: Record<string, string> = {
     "SSC CGL Tier 1": "SSC CGL Pre",
     "SSC CGL Tier 2": "SSC CGL Mains",
@@ -31,7 +31,19 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     const testMeta = uploadedTestsMetadata.get(testId);
     const isUploaded = !!testMeta;
     const title = testMeta?.paperName || `${prefixMap[prefixKey] || prefixKey} Full Mock - ${String(i + 1).padStart(2, '0')}`;
-    const attempt = userAttempts[testId];
+    const rawAttempt = userAttempts[testId];
+    
+    // Versioning check: if test was re-uploaded, old attempts should be ignored
+    let attempt = rawAttempt;
+    if (rawAttempt && isUploaded && testMeta?.lastUploadedAt) {
+      const attemptTime = rawAttempt.testUploadedAt?.seconds || 0;
+      const testTime = testMeta.lastUploadedAt?.seconds || 0;
+      
+      // If attempt was recorded BEFORE the latest upload, or has no version info, ignore it
+      if (!rawAttempt.testUploadedAt || attemptTime < testTime) {
+        attempt = undefined as any;
+      }
+    }
     
     // First 3 tests are free.
     const isFree = i < 3;
@@ -241,7 +253,7 @@ export default function MockTestsPage() {
   const [mainCategory, setMainCategory] = useState<MainCategory>("SSC CGL");
   const [activeCategory, setActiveCategory] = useState<Category>("SSC CGL Tier 1");
   const [userAttemptsMap, setUserAttemptsMap] = useState<Record<string, TestAttempt>>({});
-  const [uploadedTestsMetadata, setUploadedTestsMetadata] = useState<Map<string, {isLocked: boolean, paperName?: string}>>(new Map());
+  const [uploadedTestsMetadata, setUploadedTestsMetadata] = useState<Map<string, {isLocked: boolean, paperName?: string, lastUploadedAt?: any}>>(new Map());
   const [userPurchases, setUserPurchases] = useState<Set<string>>(new Set());
 
   useEffect(() => {

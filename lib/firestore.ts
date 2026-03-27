@@ -28,6 +28,7 @@ export interface TestAttempt {
   answers: Record<string, string>;
   language?: string;
   dateCompleted: Date;
+  testUploadedAt?: any;
 }
 
 export interface SavedQuestion {
@@ -236,7 +237,7 @@ export const getUploadedTestIds = async (): Promise<string[]> => {
   return querySnapshot.docs.map(doc => doc.id);
 };
 
-export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked: boolean, paperName?: string}[]> => {
+export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked: boolean, paperName?: string, lastUploadedAt?: any}[]> => {
   const testsRef = collection(db, "mock_tests");
   const querySnapshot = await getDocs(testsRef);
   return querySnapshot.docs.map(doc => {
@@ -244,7 +245,8 @@ export const getUploadedTestsMetadata = async (): Promise<{id: string, isLocked:
     return { 
       id: doc.id, 
       isLocked: data.isLocked !== undefined ? data.isLocked : false,
-      paperName: data.paperName || data.testName || ""
+      paperName: data.paperName || data.testName || "",
+      lastUploadedAt: data.lastUploadedAt
     };
   });
 };
@@ -299,7 +301,9 @@ export const deleteMockTest = async (testId: string) => {
     const attemptsQuery = query(collectionGroup(db, "test_attempts"), where("testId", "==", testId));
     const attemptsSnap = await getDocs(attemptsQuery);
     if (!attemptsSnap.empty) {
-      await Promise.all(attemptsSnap.docs.map(d => deleteDoc(d.ref)));
+      // Create a list of promises for each deletion
+      const deletePromises = attemptsSnap.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(deletePromises);
     }
   } catch (error) {
     console.warn("Could not delete associated user attempts (may require Firestore index or permission):", error);
