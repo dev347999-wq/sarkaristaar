@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote } from "lucide-react";
+import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getUserTestAttempts, getSavedQuestions, TestAttempt, SavedQuestion, normalizeSubject } from "@/lib/firestore";
-import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
+import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/firestore";
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [recentPurchase, setRecentPurchase] = useState<any>(null);
+  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [selectedQuestion, setSelectedQuestion] = useState<SavedQuestion | null>(null);
   const [showAllSaved, setShowAllSaved] = useState(false);
   const [activeCategory, setActiveCategory] = useState("English");
@@ -22,10 +24,17 @@ export default function DashboardPage() {
     if (user) {
       Promise.all([
         getUserTestAttempts(user.uid),
-        getSavedQuestions(user.uid)
-      ]).then(([fetchedAttempts, fetchedQuestions]) => {
+        getSavedQuestions(user.uid),
+        getUserNotes(user.uid),
+        getDetailedPurchases(user.uid)
+      ]).then(([fetchedAttempts, fetchedQuestions, fetchedNotes, fetchedPurchases]) => {
         setAttempts(fetchedAttempts);
         setSavedQuestions(fetchedQuestions);
+        setNotes(fetchedNotes);
+        if (fetchedPurchases && fetchedPurchases.length > 0) {
+          setRecentPurchase(fetchedPurchases[0]);
+          setPurchaseHistory(fetchedPurchases);
+        }
         setLoading(false);
       });
     } else {
@@ -63,29 +72,61 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {user?.displayName || "Student"}! Here is your performance overview.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link href="/practice" className="inline-flex justify-center items-center rounded-md bg-secondary text-secondary-foreground border border-input h-10 px-4 font-medium hover:bg-secondary/80 transition-colors">
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-3">
+          {recentPurchase && (
+            <div className="flex items-center gap-2 bg-emerald-50/50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full border border-emerald-200/50 dark:border-emerald-500/20 shadow-sm cursor-default">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="text-xs font-semibold">{recentPurchase.packageId || "Premium"}</span>
+            </div>
+          )}
+          <Link href="/practice" className="inline-flex justify-center items-center rounded-lg bg-primary text-primary-foreground shadow-sm h-10 px-5 text-sm font-medium hover:bg-primary/90 transition-all">
             Resume Practice
           </Link>
-          <RazorpayCheckoutButton amount={499} itemName="Premium Access" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={<Trophy className="h-6 w-6 text-yellow-500" />} title="Avg. Score" value={avgScore} trend={testsAttempted > 0 ? "+Active" : ""} trendUp />
-        <StatCard icon={<Target className="h-6 w-6 text-emerald-500" />} title="Accuracy" value={overallAccuracy} />
-        <StatCard icon={<BookMarked className="h-6 w-6 text-blue-500" />} title="Saved Qs" value={savedQuestions.length.toString()} />
-        <StatCard icon={<BarChart3 className="h-6 w-6 text-purple-500" />} title="Tests Attempted" value={testsAttempted.toString()} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <StatCard icon={<Trophy className="h-5 w-5 text-yellow-500" />} title="Avg. Score" value={avgScore} trend={testsAttempted > 0 ? "+Active" : ""} trendUp />
+        <StatCard icon={<Target className="h-5 w-5 text-emerald-500" />} title="Accuracy" value={overallAccuracy} />
+        <StatCard icon={<BookMarked className="h-5 w-5 text-blue-500" />} title="Saved Qs" value={savedQuestions.length.toString()} />
+        <StatCard icon={<BarChart3 className="h-5 w-5 text-purple-500" />} title="Tests Attempted" value={testsAttempted.toString()} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-xl font-semibold">Subject Wise Performance</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <SubjectCard name="Quantitative Aptitude" score="38/50" color="bg-blue-500" />
-            <SubjectCard name="Reasoning" score="45/50" color="bg-emerald-500" />
-            <SubjectCard name="English" score="40/50" color="bg-purple-500" />
-            <SubjectCard name="General Awareness" score="20/50" color="bg-amber-500" />
+          <div className="flex justify-between items-center -mb-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary" />
+              Recent Notes
+            </h2>
+            <Link href="/notes" className="text-xs font-medium text-primary hover:underline px-3 py-1.5 rounded-full transition-colors hover:bg-primary/5">View all</Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+            {notes.length === 0 ? (
+              <div className="col-span-1 sm:col-span-2 bg-muted/20 p-8 rounded-2xl border border-dashed border-border flex flex-col items-center justify-center text-center space-y-3">
+                 <div className="p-3 bg-card rounded-full shadow-sm border border-border/40">
+                   <BookOpen className="w-6 h-6 text-muted-foreground/50" />
+                 </div>
+                 <div>
+                   <h3 className="text-sm font-semibold text-foreground">No notes added yet</h3>
+                   <p className="text-xs text-muted-foreground mt-1">Start taking notes during your practice sessions.</p>
+                 </div>
+                 <Link href="/practice" className="mt-2 text-xs font-medium text-primary hover:underline underline-offset-4">Go to Practice</Link>
+              </div>
+            ) : (
+              notes.slice(0, 4).map(note => (
+                <Link key={note.id} href="/notes" className="bg-card p-5 rounded-2xl border border-border/60 shadow-sm flex flex-col gap-3 group hover:border-border hover:shadow-md transition-all duration-300">
+                  <div className="flex justify-between items-start gap-4">
+                    <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors pr-2 leading-tight">{note.title || "Untitled Note"}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed flex-grow">{note.content.replace(/<[^>]*>?/gm, '') || "No content available."}</p>
+                  <div className="flex justify-between items-center mt-2 pt-3 border-t border-border/40">
+                    <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{note.subject || "General"}</span>
+                    <span className="text-[10px] text-muted-foreground/60">{note.lastModified.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
         
@@ -95,22 +136,21 @@ export default function DashboardPage() {
             <span className="text-xs font-bold bg-muted px-2 py-1 rounded-full text-muted-foreground">{savedQuestions.length} Total</span>
           </div>
 
-          <div className="bg-card rounded-2xl border border-border overflow-hidden flex flex-col shadow-sm">
+          <div className="bg-card rounded-2xl border border-border/60 overflow-hidden flex flex-col shadow-sm">
             {/* Category Tabs */}
-            <div className="flex overflow-x-auto bg-muted/30 border-b border-border hide-scrollbar">
+            <div className="flex overflow-x-auto bg-muted/20 border-b border-border/40 hide-scrollbar p-1.5 gap-1">
               {categories.map((cat) => {
                 const count = savedQuestions.filter(sq => normalizeSubject(sq.subject) === cat).length;
                 return (
                   <button
                     key={cat}
                     onClick={() => { setActiveCategory(cat); setShowAllSaved(false); }}
-                    className={`flex-1 min-w-[100px] px-4 py-3 text-xs font-black uppercase tracking-widest transition-all relative ${
-                      activeCategory === cat ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                    className={`flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                      activeCategory === cat ? 'bg-background text-foreground shadow-sm border border-border/40' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border border-transparent'
                     }`}
                   >
                     {cat}
-                    {count > 0 && <span className="ml-1.5 opacity-50">({count})</span>}
-                    {activeCategory === cat && <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-full mx-4" />}
+                    {count > 0 && <span className="ml-1.5 opacity-60 text-[10px]">({count})</span>}
                   </button>
                 );
               })}
@@ -124,11 +164,11 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 (showAllSaved ? filteredSaved : filteredSaved.slice(0, 5)).map(sq => (
-                  <div key={sq.id} onClick={() => setSelectedQuestion(sq)} className="group cursor-pointer border-b border-border/50 pb-4 last:border-0 last:pb-0 hover:bg-muted/5 p-2 rounded-xl transition-all">
-                    <h4 className="font-bold text-sm group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">{sq.questionText}</h4>
-                    <div className="flex justify-between items-center mt-3">
-                      <span className="text-[10px] uppercase font-black tracking-[0.15em] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-md border border-slate-200">{sq.topic}</span>
-                      <p className="text-[10px] font-bold text-muted-foreground/60">{sq.savedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
+                  <div key={sq.id} onClick={() => setSelectedQuestion(sq)} className="group cursor-pointer border-b border-border/40 pb-4 last:border-0 last:pb-0 hover:bg-muted/30 p-2.5 rounded-xl transition-all">
+                    <h4 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">{sq.questionText}</h4>
+                    <div className="flex justify-between items-center mt-2.5">
+                      <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md">{sq.topic}</span>
+                      <p className="text-[10px] text-muted-foreground/60">{sq.savedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
                     </div>
                   </div>
                 ))
@@ -141,6 +181,46 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="space-y-4 pt-4 border-t border-border/40">
+        <h2 className="text-lg font-semibold">Purchase History</h2>
+        {purchaseHistory.length === 0 ? (
+          <div className="bg-muted/20 p-8 rounded-2xl border border-dashed border-border/60 text-center">
+            <p className="text-sm text-muted-foreground">No purchases found on this account.</p>
+          </div>
+        ) : (
+          <div className="bg-card rounded-2xl border border-border/50 overflow-hidden shadow-sm overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/30 border-b border-border/40 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <tr>
+                  <th className="px-5 py-3">Date</th>
+                  <th className="px-5 py-3">Package Content</th>
+                  <th className="px-5 py-3">Order ID / Ref</th>
+                  <th className="px-5 py-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {purchaseHistory.map((p, i) => (
+                  <tr key={p.id || i} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-5 py-3.5 text-xs text-muted-foreground font-medium whitespace-nowrap">
+                      {p.createdAt?.toDate ? p.createdAt.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : p.date || "Unknown"}
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-foreground whitespace-nowrap">
+                      {p.packageId}
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-[11px] text-muted-foreground/70 whitespace-nowrap">
+                      {p.orderId || "N/A"}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold whitespace-nowrap text-emerald-600">
+                      ₹{p.amount || 499}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {selectedQuestion && (
@@ -213,45 +293,19 @@ export default function DashboardPage() {
 
 function StatCard({ icon, title, value, trend, trendUp }: { icon: React.ReactNode, title: string, value: string, trend?: string, trendUp?: boolean }) {
   return (
-    <div className="bg-card p-6 rounded-xl border border-border shadow-sm flex flex-col justify-between h-32">
+    <div className="bg-card p-6 rounded-2xl border border-border/50 shadow-sm flex flex-col justify-between h-32 lg:h-36 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
       <div className="flex justify-between items-start">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="p-2 bg-muted rounded-md">{icon}</div>
+        <div className="p-2 bg-muted/40 rounded-xl text-muted-foreground">{icon}</div>
       </div>
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-2xl font-bold">{value}</h3>
+      <div className="flex items-baseline gap-3 mt-4">
+        <h3 className="text-3xl lg:text-4xl font-bold tracking-tight text-foreground">{value}</h3>
         {trend && (
-          <span className={`text-xs font-medium ${trendUp ? 'text-emerald-500' : 'text-red-500'}`}>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${trendUp ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10' : 'bg-red-50 text-red-600 dark:bg-red-500/10'}`}>
             {trend}
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-function SubjectCard({ name, score, color }: { name: string, score: string, color: string }) {
-  const [earned, total] = score.split('/').map(Number);
-  const percentage = (earned / total) * 100;
-  
-  return (
-    <div className="bg-card p-5 rounded-xl border border-border flex flex-col gap-3">
-      <div className="flex justify-between font-medium text-sm">
-        <span>{name}</span>
-        <span className="text-muted-foreground">{score}</span>
-      </div>
-      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-        <div className={`h-full ${color}`} style={{ width: `${percentage}%` }} />
-      </div>
-    </div>
-  );
-}
-
-function NoteItem({ title, date }: { title: string, date: string }) {
-  return (
-    <div className="group cursor-pointer">
-      <h4 className="font-medium text-sm group-hover:text-primary transition-colors">{title}</h4>
-      <p className="text-xs text-muted-foreground mt-1">{date}</p>
     </div>
   );
 }

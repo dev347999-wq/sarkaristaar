@@ -11,7 +11,8 @@ import {
   where,
   limit,
   Timestamp,
-  deleteDoc
+  deleteDoc,
+  collectionGroup
 } from "firebase/firestore";
 
 // Types
@@ -253,7 +254,7 @@ export const updateMockTestLockStatus = async (testId: string, isLocked: boolean
   await setDoc(testRef, { isLocked }, { merge: true });
 };
 
-export const getMockTest = async (testId: string) => {
+export const getMockTest = async (testId: string): Promise<any> => {
   if (!testId) return null;
   const testRef = doc(db, "mock_tests", testId);
   const docSnap = await getDoc(testRef);
@@ -292,6 +293,17 @@ export const deleteMockTest = async (testId: string) => {
   // Then delete the main document
   const testRef = doc(db, "mock_tests", testId);
   await deleteDoc(testRef);
+
+  // Also delete associated test attempts across all users
+  try {
+    const attemptsQuery = query(collectionGroup(db, "test_attempts"), where("testId", "==", testId));
+    const attemptsSnap = await getDocs(attemptsQuery);
+    if (!attemptsSnap.empty) {
+      await Promise.all(attemptsSnap.docs.map(d => deleteDoc(d.ref)));
+    }
+  } catch (error) {
+    console.warn("Could not delete associated user attempts (may require Firestore index or permission):", error);
+  }
 };
 
 export const uploadPracticeQuestions = async (subjectSlug: string, topicSlug: string, questionsData: any[]) => {
@@ -347,3 +359,33 @@ export const getUserPurchases = async (userId: string): Promise<string[]> => {
   const querySnapshot = await getDocs(purchasesRef);
   return querySnapshot.docs.map(doc => doc.data().packageId as string);
 };
+
+export const getDetailedPurchases = async (userId: string): Promise<any[]> => {
+  if (!userId) return [];
+  const purchasesRef = collection(db, "users", userId, "purchases");
+  const querySnapshot = await getDocs(purchasesRef);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a: any, b: any) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+  });
+};
+
+export const getAllPurchases = async (): Promise<any[]> => {
+  try {
+    const querySnapshot = await getDocs(collectionGroup(db, "purchases"));
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      userId: doc.ref.parent.parent?.id
+    })).sort((a: any, b: any) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    });
+  } catch(e) {
+    console.warn("Failed to get all purchases via collectionGroup", e);
+    return [];
+  }
+};
+

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
-import ParticleBackground from "@/components/ParticleBackground";
+import ParticleBackground from "@/components/ParticleBackground"; // Disabled for a cleaner UI
 import { AuthProvider } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 
@@ -38,7 +38,6 @@ export default function RootLayout({
         >
           <AuthProvider>
             <LanguageProvider>
-              <ParticleBackground />
               <Navbar />
               <main className="flex-1">
                 {children}

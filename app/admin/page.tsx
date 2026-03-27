@@ -7,7 +7,7 @@ import { Upload, FileJson, AlertCircle, CheckCircle2, Link as LinkIcon, FileSpre
 import { doc, setDoc, Timestamp, collection, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
-import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions } from "@/lib/firestore";
+import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions, getAllPurchases } from "@/lib/firestore";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 
@@ -40,7 +40,8 @@ export default function AdminPage() {
     "Computer Knowledge": ["Computer Basics", "MS Office", "Internet & Emails", "Networking", "Cyber Security"]
   };
   
-  const [uploadTarget, setUploadTarget] = useState<"mock" | "practice">("mock");
+  const [uploadTarget, setUploadTarget] = useState<"mock" | "practice" | "sales">("mock");
+  const [purchases, setPurchases] = useState<any[]>([]);
   const [selectedPracticeSubject, setSelectedPracticeSubject] = useState<string>(Object.keys(PRACTICE_SUBJECTS)[0]);
   const [selectedPracticeTopic, setSelectedPracticeTopic] = useState<string>(PRACTICE_SUBJECTS[Object.keys(PRACTICE_SUBJECTS)[0] as keyof typeof PRACTICE_SUBJECTS][0]);
   
@@ -58,19 +59,23 @@ export default function AdminPage() {
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
-  const fetchUploads = async () => {
+  const fetchAdminData = async () => {
     try {
-      const metadata = await getUploadedTestsMetadata();
+      const [metadata, allPurchases] = await Promise.all([
+        getUploadedTestsMetadata(),
+        getAllPurchases()
+      ]);
       const map: Record<string, {isLocked: boolean}> = {};
       metadata.forEach(m => map[m.id] = { isLocked: m.isLocked });
       setUploadedTests(map);
+      setPurchases(allPurchases || []);
     } catch (e) {
-      console.error("Failed to fetch upload status", e);
+      console.error("Failed to fetch admin data", e);
     }
   };
 
   useEffect(() => {
-    fetchUploads();
+    fetchAdminData();
   }, []);
 
   useEffect(() => {
@@ -528,7 +533,7 @@ export default function AdminPage() {
       setJsonInput("");
       setTestName("");
       setUploadProgress(null);
-      await fetchUploads(); // Refresh the grid
+      await fetchAdminData(); // Refresh the grid
       
       setTimeout(() => {
         setStatus("idle");
@@ -561,7 +566,7 @@ export default function AdminPage() {
       setStatus("locking");
       const testId = `${prefixMap[selectedCategory]}-Mock-${tNumber}`;
       await updateMockTestLockStatus(testId, lockStatus);
-      await fetchUploads();
+      await fetchAdminData();
       setStatus("idle");
     } catch (error: any) {
        console.error("Failed to toggle lock status", error);
@@ -575,7 +580,7 @@ export default function AdminPage() {
       setStatus("locking");
       const testId = `${prefixMap[selectedCategory]}-Mock-${tNumber}`;
       await deleteMockTest(testId);
-      await fetchUploads();
+      await fetchAdminData();
       setStatus("idle");
       setTestNumber(null);
     } catch (error: any) {
@@ -622,6 +627,12 @@ export default function AdminPage() {
           className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${uploadTarget === 'practice' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
         >
           Topic Practice Questions
+        </button>
+        <button
+          onClick={() => setUploadTarget("sales")}
+          className={`px-8 py-4 text-sm font-bold transition-all border-b-2 ${uploadTarget === 'sales' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30'}`}
+        >
+          Sales & Insights
         </button>
       </div>
 
@@ -743,6 +754,70 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+      )}
+
+      {uploadTarget === "sales" && (
+        <div className="bg-card border border-border rounded-xl p-6 shadow-sm space-y-6 animate-in slide-in-from-right-4 duration-300">
+          <h2 className="text-xl font-bold border-b border-border pb-4">Sales & Insights</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-emerald-50 text-emerald-800 p-6 rounded-2xl border border-emerald-200 shadow-sm relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-xs font-bold uppercase tracking-widest text-emerald-600/80 mb-2">Total Revenue</p>
+                <p className="text-4xl font-black">₹{purchases.reduce((acc, p) => acc + (p.amount || 499), 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-10 -mt-10" />
+            </div>
+            <div className="bg-blue-50 text-blue-800 p-6 rounded-2xl border border-blue-200 shadow-sm relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-600/80 mb-2">Students Enrolled</p>
+                <p className="text-4xl font-black">{new Set(purchases.map(p => p.userId)).size}</p>
+              </div>
+              <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10" />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-6">
+            <h3 className="text-lg font-bold">Recent Transactions</h3>
+            {purchases.length === 0 ? (
+              <div className="py-8 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+                <p className="text-sm font-semibold text-muted-foreground">No purchases recorded yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-[10px] text-muted-foreground uppercase tracking-widest font-black bg-muted/80 border-b border-border">
+                    <tr>
+                      <th className="px-5 py-4">Date</th>
+                      <th className="px-5 py-4">User ID / Order ID</th>
+                      <th className="px-5 py-4">Package</th>
+                      <th className="px-5 py-4 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {purchases.map((p, i) => (
+                      <tr key={p.id || i} className="hover:bg-muted/30 transition-colors group">
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-medium text-muted-foreground">
+                          {p.createdAt?.toDate ? p.createdAt.toDate().toLocaleString('en-IN', {day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : p.date || "Unknown"}
+                        </td>
+                        <td className="px-5 py-4">
+                           <div className="font-bold text-foreground truncate max-w-[200px]" title={p.userId}>{p.userId || "Unknown User"}</div>
+                           <div className="text-[10px] text-muted-foreground/80 font-mono mt-0.5">{p.orderId || "Offline / Legacy"}</div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest font-black">{p.packageId}</span>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <span className="font-black text-emerald-600 text-sm">₹{p.amount || 499}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Editor Panel */}
