@@ -20,8 +20,8 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     "RRB Previous 2025": "RRB 2025 PYP",
     "RRB Previous 2024": "RRB 2024 PYP",
     "RRB Previous 2023": "RRB 2023 PYP",
-    "Agniveer Army GD": "Agniveer GD",
-    "Agniveer Army Clerk": "Agniveer Clerk",
+    "GATE CS": "GATE CS",
+    "GATE ME": "GATE ME",
   };
   
   const displayPrefix = prefixMap[prefixKey] || prefixKey;
@@ -121,7 +121,7 @@ const TEST_CATEGORIES = {
     totalMarks: 120,
     negative: "-0.33 Marks (1/3rd)"
   },
-  "Agniveer Army GD": {
+  "GATE CS": {
     config: { duration: "60 Mins", questions: "50", marks: "100", demoScore: "72/100" },
     pattern: [
       { subject: "General Knowledge", questions: 15, marks: 30 },
@@ -133,7 +133,7 @@ const TEST_CATEGORIES = {
     totalMarks: 100,
     negative: "-0.50 Marks"
   },
-  "Agniveer Army Clerk": {
+  "GATE ME": {
     config: { duration: "60 Mins", questions: "50", marks: "200", demoScore: "156/200" },
     pattern: [
       { subject: "General Science", questions: 5, marks: 20 },
@@ -232,16 +232,16 @@ const CATEGORY_STRUCTURE = {
     { label: "Prev. 2024", key: "RRB Previous 2024" },
     { label: "Prev. 2023", key: "RRB Previous 2023" }
   ],
-  "Agniveer": [
-    { label: "Army GD", key: "Agniveer Army GD" },
-    { label: "Army Clerk", key: "Agniveer Army Clerk" }
+  "GATE": [
+    { label: "Computer Science (CS)", key: "GATE CS" },
+    { label: "Mechanical (ME)", key: "GATE ME" }
   ]
 } as const;
 
 const PACKAGE_PRICING = {
   "SSC CGL": { price: 250, name: "SSC CGL Pro (Pre + Mains)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] },
   "RRB NTPC": { price: 10, name: "RRB NTPC Pro (CBT 1 + CBT 2)", features: ["200+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] },
-  "Agniveer": { price: 149, name: "Agniveer Pro (Army GD + Clerk)", features: ["100+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
+  "GATE": { price: 149, name: "GATE Pro (CS + ME)", features: ["100+ Full Mocks", "Detailed AI Analytics", "All India Rank", "Unlimited Retakes"] }
 };
 
 type MainCategory = keyof typeof CATEGORY_STRUCTURE;
