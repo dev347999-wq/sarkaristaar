@@ -1,4 +1,5 @@
 import { Bookmark, Clock, CheckCircle } from "lucide-react";
+import { safeText, toDirectFileUrl } from "@/lib/utils";
 
 export interface QuestionCardProps {
   number: number;
@@ -88,7 +89,30 @@ export function QuestionCard({
               `}>
                 {String.fromCharCode(65 + index)}
               </div>
-              <span className="text-sm md:text-base">{option}</span>
+              <span className="text-sm md:text-base flex flex-col gap-2">
+                {(() => {
+                  const s = safeText(option);
+                  const hasUrl = /https?:\/\//i.test(s);
+                  if (!hasUrl) return s;
+
+                  const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
+                  return parts.map((part, i) => {
+                    if (/^https?:\/\//i.test(part.trim())) {
+                      return (
+                        <div key={i} className="mt-2 rounded-lg overflow-hidden border border-border bg-white p-1 max-w-[200px]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={toDirectFileUrl(part.trim())} 
+                            alt={`Option figure ${i}`} 
+                            className="w-full h-auto object-contain bg-slate-50"
+                          />
+                        </div>
+                      );
+                    }
+                    return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+                  });
+                })()}
+              </span>
               
               {showAnswer && isActuallyCorrect && <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 ml-auto" />}
             </button>

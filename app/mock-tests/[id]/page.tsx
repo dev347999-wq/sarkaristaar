@@ -19,37 +19,8 @@ import {
   UserCircle
 } from "lucide-react";
 import Link from "next/link";
+import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
-// Helper: safely extract string from richText objects
-const safeText = (val: any): string => {
-  if (val == null) return "";
-  if (typeof val === 'string') return val;
-  if (typeof val === 'number') return String(val);
-  if (Array.isArray(val)) {
-    return val.map((item: any) => {
-      if (typeof item === 'string') return item;
-      if (item && typeof item === 'object') return item.richText || item.text || item.t || item.v || '';
-      return String(item || '');
-    }).join('');
-  }
-  if (typeof val === 'object') {
-    if (val.richText) return safeText(val.richText);
-    if (val.text) return String(val.text);
-    return '';
-  }
-  return "";
-};
-
-// Helper: Convert Google Drive share links to direct image URLs
-const toDirectImageUrl = (url: string) => {
-  if (!url) return "";
-  const driveRegex = /\/file\/d\/([^\/]+)\//;
-  const match = url.match(driveRegex);
-  if (match && match[1]) {
-    return `https://lh3.googleusercontent.com/u/0/d/${match[1]}`;
-  }
-  return url;
-};
 
 export default function TestPlayer() {
   const params = useParams();
@@ -522,8 +493,29 @@ export default function TestPlayer() {
                       }`}>
                         {i + 1}
                       </div>
-                      <span className={`ml-4 text-base font-medium transition-colors ${isSelected ? 'text-sky-900' : 'text-slate-600 group-hover:text-slate-800'}`}>
-                        {safeText(option)}
+                      <span className={`ml-4 text-base font-medium transition-colors flex flex-col gap-2 ${isSelected ? 'text-sky-900' : 'text-slate-600 group-hover:text-slate-800'}`}>
+                        {(() => {
+                          const s = safeText(option);
+                          const hasUrl = /https?:\/\//i.test(s);
+                          if (!hasUrl) return s;
+
+                          const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
+                          return parts.map((part, i) => {
+                            if (/^https?:\/\//i.test(part.trim())) {
+                              return (
+                                <div key={i} className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-white p-1 max-w-[250px] shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img 
+                                    src={toDirectImageUrl(part.trim())} 
+                                    alt={`Option figure ${i}`} 
+                                    className="w-full h-auto object-contain"
+                                  />
+                                </div>
+                              );
+                            }
+                            return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+                          });
+                        })()}
                       </span>
                     </button>
                   );

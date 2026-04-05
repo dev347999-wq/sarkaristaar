@@ -5,52 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getMockTest, getTestAttempt, saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
 import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ChevronLeft, BarChart3, Clock, Target, BookmarkPlus } from "lucide-react";
+import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
-// Helper: safely extract a string from data that might be a {richText} object or array of them
-const safeText = (val: any): string => {
-  if (val == null) return "";
-  if (typeof val === 'string') return val;
-  if (typeof val === 'number') return String(val);
-  // Handle arrays (Excel rich text cells are stored as arrays of objects)
-  if (Array.isArray(val)) {
-    return val.map((item: any) => {
-      if (typeof item === 'string') return item;
-      if (item && typeof item === 'object') {
-        // {richText: "..."} or {text: "...", ...} or {t: "..."}
-        return item.richText || item.text || item.t || item.v || '';
-      }
-      return String(item || '');
-    }).join('');
-  }
-  // Handle single object
-  if (typeof val === 'object') {
-    if (val.richText) return safeText(val.richText); // richText might itself be an array
-    if (val.text) return String(val.text);
-    if (val.t) return String(val.t);
-    if (val.v) return String(val.v);
-    return '';
-  }
-  return String(val);
-};
-
-// Helper: convert Google Drive share links to direct embeddable image URLs
-const toDirectImageUrl = (url: string): string => {
-  if (!url) return '';
-  const s = safeText(url).trim();
-  // Google Drive file link: https://drive.google.com/file/d/FILE_ID/view?...
-  const driveMatch = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (driveMatch) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
-  }
-  // Google Drive open link: https://drive.google.com/open?id=FILE_ID
-  const openMatch = s.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
-  if (openMatch) {
-    return `https://lh3.googleusercontent.com/d/${openMatch[1]}`;
-  }
-  // Google Drive uc link: already direct
-  if (s.includes('drive.google.com/uc')) return s;
-  return s;
-};
 
 export default function TestAnalysis() {
   const params = useParams();
@@ -303,8 +259,30 @@ export default function TestAnalysis() {
                     key={i}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center justify-between ${btnStyle}`}
                   >
-                    <div>
-                      <span className="font-bold mr-3">{currentLetter}.</span> {safeText(option)}
+                    <div className="flex flex-col gap-2">
+                      <span className="font-bold mr-3">{currentLetter}.</span> 
+                      {(() => {
+                        const s = safeText(option);
+                        const hasUrl = /https?:\/\//i.test(s);
+                        if (!hasUrl) return s;
+
+                        const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
+                        return parts.map((part, i) => {
+                          if (/^https?:\/\//i.test(part.trim())) {
+                            return (
+                              <div key={i} className="mt-2 rounded-xl overflow-hidden border border-border bg-white p-1 max-w-[250px] shadow-sm">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img 
+                                  src={toDirectImageUrl(part.trim())} 
+                                  alt={`Option figure ${i}`} 
+                                  className="w-full h-auto object-contain"
+                                />
+                              </div>
+                            );
+                          }
+                          return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+                        });
+                      })()}
                     </div>
                     {isCorrectOption && <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
                     {isSelected && !isCorrectOption && <AlertCircle className="w-5 h-5 text-destructive" />}

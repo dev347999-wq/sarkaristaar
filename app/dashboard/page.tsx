@@ -5,6 +5,7 @@ import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote, Shiel
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, getUploadedTestsMetadata, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/firestore";
+import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -289,8 +290,29 @@ export default function DashboardPage() {
                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Synonyms / Options</h4>
                   <div className="flex flex-wrap gap-2.5">
                     {selectedQuestion.options.map((opt, i) => (
-                      <span key={i} className="bg-emerald-50 text-emerald-700 text-sm font-black px-4 py-2 rounded-xl border-2 border-emerald-100 shadow-sm hover:bg-emerald-100 transition-colors">
-                        {opt}
+                      <span key={i} className="bg-emerald-50 text-emerald-700 text-sm font-black px-4 py-2 rounded-xl border-2 border-emerald-100 shadow-sm hover:bg-emerald-100 transition-colors flex flex-col gap-2">
+                        {(() => {
+                          const s = safeText(opt);
+                          const hasUrl = s.includes('http');
+                          if (!hasUrl) return s;
+
+                          const parts = s.split(/(https?:\/\/[^\s]+)/);
+                          return parts.map((part, index) => {
+                            if (part.startsWith('http')) {
+                              return (
+                                <div key={index} className="mt-1 rounded-lg overflow-hidden border border-emerald-200 bg-white p-1 max-w-[150px]">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img 
+                                    src={toDirectImageUrl(part)} 
+                                    alt={`Option figure ${index}`} 
+                                    className="w-full h-auto object-contain"
+                                  />
+                                </div>
+                              );
+                            }
+                            return <span key={index}>{part}</span>;
+                          });
+                        })()}
                       </span>
                     ))}
                   </div>

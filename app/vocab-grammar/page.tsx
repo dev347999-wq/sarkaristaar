@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Sparkles, Brain, BookOpen, ChevronRight, ChevronLeft, RefreshCw, Volume2, Trophy, Bookmark, Link2, GitCompare, GitMerge } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
+import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
 const allVocabPool = [
   { word: "Abstain", meaning: "To restrain oneself from doing or enjoying something", root: "abs- (away) + tenere (to hold)", synonyms: ["refrain", "desist", "forgo"], antonyms: ["indulge", "consume"], example: "Members of the opposition decided to abstain from voting on the controversial bill.", image: "/vocab/abstain.webp" },
@@ -774,9 +775,30 @@ function GamesSection({ vocab, grammar }: { vocab: any[], grammar: any[] }) {
           <button 
             key={i}
             onClick={() => handleAnswer(opt)}
-            className="p-6 border-2 border-border rounded-2xl text-left font-medium hover:border-primary hover:bg-primary/5 transition-all w-full text-foreground/90 shadow-sm hover:shadow"
+            className="p-6 border-2 border-border rounded-2xl text-left font-medium hover:border-primary hover:bg-primary/5 transition-all w-full text-foreground/90 shadow-sm hover:shadow flex flex-col gap-2"
           >
-            {opt}
+            {(() => {
+              const s = safeText(opt);
+              const hasUrl = s.includes('http');
+              if (!hasUrl) return s;
+
+              const parts = s.split(/(https?:\/\/[^\s]+)/);
+              return parts.map((part, index) => {
+                if (part.startsWith('http')) {
+                  return (
+                    <div key={index} className="mt-1 rounded-lg overflow-hidden border border-border bg-white p-1 max-w-[150px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={toDirectImageUrl(part)} 
+                        alt={`Option figure ${index}`} 
+                        className="w-full h-auto object-contain"
+                      />
+                    </div>
+                  );
+                }
+                return <span key={index}>{part}</span>;
+              });
+            })()}
           </button>
         ))}
       </div>
