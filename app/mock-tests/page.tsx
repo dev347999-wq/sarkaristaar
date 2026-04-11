@@ -13,8 +13,11 @@ const generateTests = (prefixKey: string, count: number, config: any, userAttemp
     "SSC CGL Tier 1": "SSC CGL Pre",
     "SSC CGL Tier 2": "SSC CGL Mains",
     "SSC Previous 2025": "SSC 2025 PYP",
+    "SSC Previous Tier 2 2025": "SSC 2025 PYP Mains",
     "SSC Previous 2024": "SSC 2024 PYP",
+    "SSC Previous Tier 2 2024": "SSC 2024 PYP Mains",
     "SSC Previous 2023": "SSC 2023 PYP",
+    "SSC Previous Tier 2 2023": "SSC 2023 PYP Mains",
     "RRB NTPC CBT 1": "RRB NTPC CBT 1",
     "RRB NTPC CBT 2": "RRB NTPC CBT 2",
     "RRB Previous 2025": "RRB 2025 PYP",
@@ -182,6 +185,42 @@ const TEST_CATEGORIES = {
     totalMarks: 200,
     negative: "-0.50 Marks"
   },
+  "SSC Previous Tier 2 2023": {
+    config: { duration: "135 Mins", questions: "130", marks: "390", demoScore: "310/390" },
+    pattern: [
+      { subject: "Mathematical Abilities", questions: 30, marks: 90 },
+      { subject: "Reasoning & Gen. Intelligence", questions: 30, marks: 90 },
+      { subject: "English Language & Comprehension", questions: 45, marks: 135 },
+      { subject: "General Awareness", questions: 25, marks: 75 },
+    ],
+    totalQs: 130,
+    totalMarks: 390,
+    negative: "-1.00 Marks"
+  },
+  "SSC Previous Tier 2 2024": {
+    config: { duration: "135 Mins", questions: "130", marks: "390", demoScore: "310/390" },
+    pattern: [
+      { subject: "Mathematical Abilities", questions: 30, marks: 90 },
+      { subject: "Reasoning & Gen. Intelligence", questions: 30, marks: 90 },
+      { subject: "English Language & Comprehension", questions: 45, marks: 135 },
+      { subject: "General Awareness", questions: 25, marks: 75 },
+    ],
+    totalQs: 130,
+    totalMarks: 390,
+    negative: "-1.00 Marks"
+  },
+  "SSC Previous Tier 2 2025": {
+    config: { duration: "135 Mins", questions: "130", marks: "390", demoScore: "310/390" },
+    pattern: [
+      { subject: "Mathematical Abilities", questions: 30, marks: 90 },
+      { subject: "Reasoning & Gen. Intelligence", questions: 30, marks: 90 },
+      { subject: "English Language & Comprehension", questions: 45, marks: 135 },
+      { subject: "General Awareness", questions: 25, marks: 75 },
+    ],
+    totalQs: 130,
+    totalMarks: 390,
+    negative: "-1.00 Marks"
+  },
   "RRB Previous 2025": {
     config: { duration: "90 Mins", questions: "100", marks: "100", demoScore: "78.3/100" },
     pattern: [
@@ -221,9 +260,12 @@ const CATEGORY_STRUCTURE = {
   "SSC CGL": [
     { label: "Tier 1 (Pre)", key: "SSC CGL Tier 1" },
     { label: "Tier 2 (Mains)", key: "SSC CGL Tier 2" },
-    { label: "Prev. 2025", key: "SSC Previous 2025" },
-    { label: "Prev. 2024", key: "SSC Previous 2024" },
-    { label: "Prev. 2023", key: "SSC Previous 2023" }
+    { label: "Prev. '25 (Pre)", key: "SSC Previous 2025" },
+    { label: "Prev. '25 (Mains)", key: "SSC Previous Tier 2 2025" },
+    { label: "Prev. '24 (Pre)", key: "SSC Previous 2024" },
+    { label: "Prev. '24 (Mains)", key: "SSC Previous Tier 2 2024" },
+    { label: "Prev. '23 (Pre)", key: "SSC Previous 2023" },
+    { label: "Prev. '23 (Mains)", key: "SSC Previous Tier 2 2023" }
   ],
   "RRB NTPC": [
     { label: "CBT 1", key: "RRB NTPC CBT 1" },
