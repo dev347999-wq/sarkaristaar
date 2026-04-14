@@ -85,7 +85,6 @@ export default function AdminPage() {
     }
   }, [user, loading, router, adminEmail]);
 
-  // Show spinner while Firebase is initializing OR while not yet confirmed as admin.
   // This prevents ANY flash of admin content to unauthenticated users.
   if (loading || !user) {
     return (
@@ -171,7 +170,6 @@ export default function AdminPage() {
           const imageMap: Record<string, string[]> = {}; // "row-col" -> [base64, ...]
           const images = worksheet.getImages();
           
-          setProcessStep(`Uploading ${images.length} images to Firebase...`);
           
           // Build blobs first, then upload ALL in parallel for speed
           const uploadTasks: { cellKey: string; blob: Blob; ext: string }[] = [];
@@ -489,10 +487,8 @@ export default function AdminPage() {
 
       const testId = `${prefixMap[selectedCategory]}-Mock-${testNumber}`;
 
-      // Sanitize data for Firestore (removes any `undefined` properties that PapaParse might leak, which Firestore rejects)
       const sanitizedData = JSON.parse(JSON.stringify(parsedData));
 
-      // 1. Save questions payload — chunked subcollection to bypass Firestore 1MB limit / mapped to Postgres rows
       setProcessStep("Saving to database...");
 
       let savePromise: Promise<any>;
@@ -565,7 +561,6 @@ export default function AdminPage() {
       if (error.code === '42501' || error.message?.includes('policy')) {
         msg = "Upload blocked by Supabase RLS Policies. Please go to your Supabase Console -> Auth -> Policies and ensure you have write access.";
       } else if (error.code === "quota-exceeded") {
-        msg = "Firebase quota exceeded. Check your usage.";
       } else if (error.message && error.message.includes("undefined")) {
         msg = "There was an invalid 'undefined' value in your CSV. Please check for empty columns.";
       }
@@ -994,7 +989,6 @@ export default function AdminPage() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="h-3.5 w-3.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                  <span className="text-sm font-bold text-primary">Uploading Images to Firebase</span>
                 </div>
                 <span className="text-sm font-black tabular-nums text-primary">
                   {Math.round((uploadProgress.done / uploadProgress.total) * 100)}%

@@ -112,7 +112,6 @@ export function RazorpayCheckoutButton({
               }
               
               try {
-                // 4. Save to Firestore explicitly from the Client
                 await recordPurchase(user.uid, itemName, {
                   orderId: response.razorpay_order_id,
                   paymentId: response.razorpay_payment_id,
@@ -120,7 +119,6 @@ export function RazorpayCheckoutButton({
                   date: new Date().toISOString()
                 });
               } catch (dbError) {
-                console.error("Critical: Failed to save purchase to Firestore!", dbError);
                 // The purchase failed to save to the DB, but we already unlocked the UI for this session.
               }
 

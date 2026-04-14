@@ -88,7 +88,6 @@ export default function TopicPracticePage() {
           await deleteSavedQuestion(user.uid, questionId);
         }
       } catch (error) {
-        console.error("Failed to sync saved question to Firestore:", error);
       }
     }
   };
@@ -117,7 +116,6 @@ export default function TopicPracticePage() {
             answers: {} // Practice mode doesn't need to store granular answers yet
           });
         } catch (error) {
-          console.error("Failed to save attempt to Firestore:", error);
         }
       }
     }
