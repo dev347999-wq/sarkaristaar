@@ -150,7 +150,7 @@ export default function TestAnalysis() {
             <ArrowLeft className="w-4 h-4" /> Back to Tests
           </button>
           <h1 className="font-bold text-2xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">{attempt.testTitle}</h1>
-          <p className="text-sm font-medium text-muted-foreground mt-1">Completed on {attempt.dateCompleted?.toLocaleDateString()} at {attempt.dateCompleted?.toLocaleTimeString()}</p>
+          <p className="text-sm font-medium text-muted-foreground mt-1">Completed on {attempt.dateCompleted ? new Date(attempt.dateCompleted).toLocaleDateString() : ''} at {attempt.dateCompleted ? new Date(attempt.dateCompleted).toLocaleTimeString() : ''}</p>
         </div>
         
         <div className="flex bg-muted/50 p-4 rounded-xl border border-border gap-6 md:gap-8 overflow-x-auto">

@@ -142,7 +142,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed flex-grow">{note.content.replace(/<[^>]*>?/gm, '') || "No content available."}</p>
                   <div className="flex justify-between items-center mt-2 pt-3 border-t border-border/40">
                     <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{note.subject || "General"}</span>
-                    <span className="text-[10px] text-muted-foreground/60">{note.lastModified.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                    <span className="text-[10px] text-muted-foreground/60">{new Date(note.lastModified).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
                   </div>
                 </Link>
               ))
@@ -188,7 +188,7 @@ export default function DashboardPage() {
                     <h4 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">{sq.questionText}</h4>
                     <div className="flex justify-between items-center mt-2.5">
                       <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5 rounded-md">{sq.topic}</span>
-                      <p className="text-[10px] text-muted-foreground/60">{sq.savedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
+                      <p className="text-[10px] text-muted-foreground/60">{new Date(sq.savedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
                     </div>
                   </div>
                 ))
