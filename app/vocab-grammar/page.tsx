@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Sparkles, Brain, BookOpen, ChevronRight, ChevronLeft, RefreshCw, Volume2, Trophy, Bookmark, Link2, GitCompare, GitMerge } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
+import { saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/database";
 import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
 const allVocabPool = [

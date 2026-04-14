@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getMockTest, getTestAttempt, saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/firestore";
+import { getMockTest, getTestAttempt, saveQuestion, deleteSavedQuestion, getSavedQuestions, normalizeSubject } from "@/lib/database";
 import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, ChevronLeft, BarChart3, Clock, Target, BookmarkPlus } from "lucide-react";
 import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 

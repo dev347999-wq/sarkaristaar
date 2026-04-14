@@ -1,70 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { auth } from "@/lib/firebase";
-import {
-  signInWithPopup,
-  signInWithRedirect,
-  GoogleAuthProvider,
-  getRedirectResult,
-} from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { AlertCircle } from "lucide-react";
 
 export function GoogleAuthButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
-
-  // Handle the result when user is returned from the Google redirect page
-  useEffect(() => {
-    setIsLoading(true);
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          router.push("/dashboard");
-        }
-      })
-      .catch((err: any) => {
-        console.error("Google redirect error:", err);
-        setError(getFriendlyError(err.code));
-      })
-      .finally(() => setIsLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError("");
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
 
     try {
-      // Try popup first (better UX on desktop)
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
-    } catch (err: any) {
-      console.error("Google popup error:", err);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        // Next.js app needs the redirectTo if it's not the same domain or if testing locally,
+        // but default is fine if it's set in Supabase dashboard.
+      });
 
-      // If popup was blocked or closed — fall back to redirect (works on mobile / strict browsers)
-      if (
-        err.code === "auth/popup-blocked" ||
-        err.code === "auth/popup-closed-by-user" ||
-        err.code === "auth/cancelled-popup-request"
-      ) {
-        try {
-          await signInWithRedirect(auth, provider);
-          // Page will redirect; no further action needed here
-          return;
-        } catch (redirectErr: any) {
-          console.error("Google redirect error:", redirectErr);
-          setError(getFriendlyError(redirectErr.code));
-        }
-      } else {
-        setError(getFriendlyError(err.code));
+      if (error) {
+        throw error;
       }
-
+      // Note: page will redirect, no local navigation needed here
+    } catch (err: any) {
+      console.error("Google sign-in error:", err);
+      setError(err.message || "Failed to sign in with Google.");
       setIsLoading(false);
     }
   };
@@ -107,28 +68,4 @@ export function GoogleAuthButton() {
       </button>
     </div>
   );
-}
-
-// Converts Firebase error codes to human-readable messages
-function getFriendlyError(code: string): string {
-  switch (code) {
-    case "auth/unauthorized-domain":
-      return "CRITICAL: This domain (sarkaristaar.com) is not authorized in Firebase. Add it in Firebase Console -> Authentication -> Settings -> Authorized domains.";
-    case "auth/operation-not-allowed":
-      return "Google Sign-In is not enabled. Enable it in Firebase Console -> Authentication -> Sign-in methods -> Add Google.";
-    case "auth/internal-error":
-      return "Firebase internal error. Check your API key in .env.local.";
-    case "auth/network-request-failed":
-      return "Network error. Please check your connection.";
-    case "auth/user-disabled":
-      return "This account has been disabled.";
-    case "auth/popup-blocked":
-      return "Sign-in popup was blocked. Please allow popups for this site or try again.";
-    case "auth/popup-closed-by-user":
-      return "Sign-in was cancelled (popup closed).";
-    case "auth/configuration-not-found":
-      return "Firebase project configuration error. Check your Firebase settings.";
-    default:
-      return `Sign-in failed. Error code: ${code}. Please ensure this domain is added to Authorized Domains in Firebase.`;
-  }
 }

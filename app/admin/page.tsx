@@ -4,10 +4,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Upload, FileJson, AlertCircle, CheckCircle2, Link as LinkIcon, FileSpreadsheet, Lock, Unlock, Search } from "lucide-react";
-import { doc, setDoc, Timestamp, collection, getDocs, deleteDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions, getAllPurchases } from "@/lib/firestore";
+import { supabase } from "@/lib/supabase";
+import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions, getAllPurchases } from "@/lib/database";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
 
@@ -205,9 +203,15 @@ export default function AdminPage() {
           let doneCount = 0;
           setUploadProgress({ done: 0, total: uploadTasks.length });
           await Promise.all(uploadTasks.map(async ({ cellKey, blob, ext }) => {
-            const fileRef = ref(storage, `test-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`);
-            await uploadBytes(fileRef, blob);
-            const downloadUrl = await getDownloadURL(fileRef);
+            const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+            const { error: uploadErr } = await supabase.storage.from("test-images").upload(fileName, blob, {
+              contentType: blob.type
+            });
+            if (uploadErr) throw uploadErr;
+            
+            const { data: publicUrlData } = supabase.storage.from("test-images").getPublicUrl(fileName);
+            const downloadUrl = publicUrlData.publicUrl;
+            
             if (!imageMap[cellKey]) imageMap[cellKey] = [];
             imageMap[cellKey].push(downloadUrl);
             doneCount++;
@@ -488,8 +492,8 @@ export default function AdminPage() {
       // Sanitize data for Firestore (removes any `undefined` properties that PapaParse might leak, which Firestore rejects)
       const sanitizedData = JSON.parse(JSON.stringify(parsedData));
 
-      // 1. Save questions payload — chunked subcollection to bypass Firestore 1MB limit
-      setProcessStep("Saving to Firestore database...");
+      // 1. Save questions payload — chunked subcollection to bypass Firestore 1MB limit / mapped to Postgres rows
+      setProcessStep("Saving to database...");
 
       let savePromise: Promise<any>;
       if (uploadTarget === "practice") {
@@ -497,40 +501,42 @@ export default function AdminPage() {
         const topicSlug = selectedPracticeTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         savePromise = uploadPracticeQuestions(subjectSlug, topicSlug, sanitizedData);
       } else {
-        const CHUNK_SIZE = 25; // 25 questions per Firestore sub-document (~safe for any size)
         savePromise = (async () => {
-          const testRef = doc(db, "mock_tests", testId);
-
-          // Step A: Write metadata to main doc (no questionsData here)
-          await setDoc(testRef, {
-            categoryId: selectedCategory,
-            testNumber: testNumber,
-            testName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
-            paperName: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
-            uploadedAt: Timestamp.now(),
-            lastUploadedAt: Timestamp.now(),
-            questionCount: sanitizedData.length,
-            isLocked: false,
-          });
+          // Step A: Write metadata to main table
+          const { error: testErr } = await supabase.from('mock_tests').upsert({
+            id: testId,
+            test_name: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
+            paper_name: testName || `${prefixMap[selectedCategory]} Mock ${testNumber}`,
+            last_uploaded_at: new Date().toISOString(),
+            is_locked: false,
+            metadata: {
+              categoryId: selectedCategory,
+              testNumber: testNumber,
+              questionCount: sanitizedData.length,
+            }
+          }, { onConflict: 'id' });
+          if (testErr) throw testErr;
 
           // Step B: Delete old question chunks (re-upload scenario)
-          const existingChunksSnap = await getDocs(collection(db, "mock_tests", testId, "questions"));
-          await Promise.all(existingChunksSnap.docs.map(d => deleteDoc(d.ref)));
+          await supabase.from('mock_test_questions').delete().eq('test_id', testId);
 
           // Step C: Write new question chunks in parallel
+          const CHUNK_SIZE = 50;
           const totalChunks = Math.ceil(sanitizedData.length / CHUNK_SIZE);
-          const chunkWrites = Array.from({ length: totalChunks }, (_, i) => {
-            const chunkData = sanitizedData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-            const chunkRef = doc(db, "mock_tests", testId, "questions", `chunk-${i}`);
-            return setDoc(chunkRef, { questions: chunkData, chunkIndex: i });
-          });
+          const chunkWrites = Array.from({ length: totalChunks }, (_, i) => ({
+             test_id: testId,
+             chunk_index: i,
+             questions: sanitizedData.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE)
+          }));
+          
           setProcessStep(`Saving ${totalChunks} question chunks...`);
-          await Promise.all(chunkWrites);
+          const { error: chunkErr } = await supabase.from('mock_test_questions').insert(chunkWrites);
+          if (chunkErr) throw chunkErr;
         })();
       }
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Firestore save timed out. Please check if your Firestore Database is created and enabled in your Firebase console.")), 60000)
+        setTimeout(() => reject(new Error("Database save timed out.")), 60000)
       );
 
       await Promise.race([savePromise, timeoutPromise]);
@@ -555,9 +561,9 @@ export default function AdminPage() {
       
       let msg = error.message || "Failed to upload test series questions.";
       
-      // Specifically catch Firestore rules or quota errors
-      if (error.code === "permission-denied") {
-        msg = "Upload blocked by Firestore Rules. Please go to your Firebase Console -> Firestore -> Rules and ensure you have write access.";
+      // Specifically catch rules or quota errors
+      if (error.code === '42501' || error.message?.includes('policy')) {
+        msg = "Upload blocked by Supabase RLS Policies. Please go to your Supabase Console -> Auth -> Policies and ensure you have write access.";
       } else if (error.code === "quota-exceeded") {
         msg = "Firebase quota exceeded. Check your usage.";
       } else if (error.message && error.message.includes("undefined")) {

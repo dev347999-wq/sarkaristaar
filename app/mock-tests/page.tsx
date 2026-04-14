@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { TestCard } from "@/components/test-card";
 import { useAuth } from "@/context/AuthContext";
-import { getUserTestAttempts, getUploadedTestsMetadata, getUserPurchases, TestAttempt } from "@/lib/firestore";
+import { getUserTestAttempts, getUploadedTestsMetadata, getUserPurchases, TestAttempt } from "@/lib/database";
 import { RazorpayCheckoutButton } from "@/components/payments/razorpay-checkout";
 
 // Generator for mock tests

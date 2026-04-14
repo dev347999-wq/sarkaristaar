@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { recordPurchase } from "@/lib/firestore";
+import { recordPurchase } from "@/lib/database";
 
 const loadScript = (src: string) => {
   return new Promise((resolve) => {

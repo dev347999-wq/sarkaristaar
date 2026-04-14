@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, AlertCircle } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -21,7 +20,11 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to sign in. Please check your credentials.");

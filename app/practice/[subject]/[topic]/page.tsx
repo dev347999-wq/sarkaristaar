@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, RefreshCw, CheckCircle, BrainCircuit } from "lucide-react";
 import { QuestionCard } from "@/components/question-card";
 import { useAuth } from "@/context/AuthContext";
-import { saveQuestion, deleteSavedQuestion, saveTestAttempt, getPracticeQuestions, normalizeSubject, getSavedQuestions } from "@/lib/firestore";
+import { saveQuestion, deleteSavedQuestion, saveTestAttempt, getPracticeQuestions, normalizeSubject, getSavedQuestions } from "@/lib/database";
 export default function TopicPracticePage() {
   const params = useParams();
   const router = useRouter();

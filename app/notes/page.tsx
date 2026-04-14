@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, BookMarked, Tag, Languages, SpellCheck, LayoutGrid, ArrowRight, Trash2, HelpCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { getSavedQuestions, deleteSavedQuestion, SavedQuestion, normalizeSubject } from "@/lib/firestore";
+import { getSavedQuestions, deleteSavedQuestion, SavedQuestion, normalizeSubject } from "@/lib/database";
 
 // Helper for batching
 const chunkArray = (array: any[], size: number) => {

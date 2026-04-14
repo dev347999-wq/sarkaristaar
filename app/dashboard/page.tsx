@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { BarChart3, Clock, Trophy, Target, BookMarked, X, BookOpen, Quote, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, getUploadedTestsMetadata, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/firestore";
+import { getUserTestAttempts, getSavedQuestions, getUserNotes, getDetailedPurchases, getUploadedTestsMetadata, TestAttempt, SavedQuestion, Note, normalizeSubject } from "@/lib/database";
 import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
 export default function DashboardPage() {

@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BookOpen, AlertCircle } from "lucide-react";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
-import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
@@ -22,11 +21,18 @@ export default function SignupPage() {
     setError("");
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Update profile with full name
-      await updateProfile(userCredential.user, {
-        displayName: fullName
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
       });
+      
+      if (signUpError) throw signUpError;
+      
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to create an account. Please try again.");
