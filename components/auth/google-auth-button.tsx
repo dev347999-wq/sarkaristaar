@@ -15,8 +15,9 @@ export function GoogleAuthButton() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        // Next.js app needs the redirectTo if it's not the same domain or if testing locally,
-        // but default is fine if it's set in Supabase dashboard.
+        options: {
+          redirectTo: `${location.origin}/auth/callback`,
+        },
       });
 
       if (error) {
