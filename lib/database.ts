@@ -161,7 +161,7 @@ export const saveQuestion = async (userId: string, question: Omit<SavedQuestion,
     explanation: question.explanation,
     explanation_hindi: question.explanationHindi,
     saved_at: new Date()
-  }, { onConflict: 'question_id' });
+  }, { onConflict: 'user_id,question_id' });
 
   if (error) throw error;
   return question.questionId;

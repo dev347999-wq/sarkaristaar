@@ -49,8 +49,8 @@ CREATE INDEX IF NOT EXISTS idx_test_attempts_test_id ON public.test_attempts(tes
 
 -- 3. Saved Questions Table
 CREATE TABLE IF NOT EXISTS public.saved_questions (
-  question_id text PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  question_id text NOT NULL,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   subject text not null,
   topic text not null,
   question_text text not null,
@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS public.saved_questions (
   image_url text,
   saved_at timestamp with time zone default timezone('utc'::text, now()) not null,
   explanation text,
-  explanation_hindi text
+  explanation_hindi text,
+  PRIMARY KEY (user_id, question_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_saved_questions_user_id ON public.saved_questions(user_id);
