@@ -22,7 +22,19 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "image.pollinations.ai",
-      }
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com", // Google Drive direct image URLs
+      },
+      {
+        protocol: "https",
+        hostname: "eyxxatvxvzomjtzgfaej.supabase.co", // Supabase Storage
+      },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co", // Any Supabase project (future-proof)
+      },
     ],
   },
   typescript: {
