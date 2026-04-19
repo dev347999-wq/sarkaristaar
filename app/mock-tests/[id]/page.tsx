@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getMockTest, saveTestAttempt, saveQuestion, normalizeSubject, getSavedQuestions, deleteSavedQuestion } from "@/lib/database";
@@ -16,11 +16,26 @@ import {
   BookmarkPlus, 
   Flag,
   Star,
-  UserCircle
+  UserCircle,
+  TriangleRight
 } from "lucide-react";
 import Link from "next/link";
 import { safeText, toDirectFileUrl as toDirectImageUrl } from "@/lib/utils";
 
+// ─── SSC CGL exam section definitions (PART-A … PART-D) ──────────────────────
+const SSC_SECTIONS = [
+  { part: "PART-A", label: "General Intelligence", color: "#0e6f8a",   bg: "#0e6f8a" },
+  { part: "PART-B", label: "General Awareness",    color: "#0e6f8a",   bg: "#0e6f8a" },
+  { part: "PART-C", label: "Quantitative Aptitude",color: "#0e6f8a",   bg: "#0e6f8a" },
+  { part: "PART-D", label: "English Comprehension",color: "#1e8c45",   bg: "#1e8c45" },
+];
+const PART_COLORS = ["#1a6ea8","#1a6ea8","#1a6ea8","#1e8c45"];
+
+/** Return which PART index a question belongs to (0-indexed, each 25 Qs). */
+function getPartIndex(qIndex: number, totalQs: number): number {
+  const perPart = Math.ceil(totalQs / SSC_SECTIONS.length);
+  return Math.min(Math.floor(qIndex / perPart), SSC_SECTIONS.length - 1);
+}
 
 export default function TestPlayer() {
   const params = useParams();
@@ -40,12 +55,15 @@ export default function TestPlayer() {
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // New states for Testbook-style UI
+  // Testbook-style UI states
   const [visitedIndices, setVisitedIndices] = useState<Set<number>>(new Set([0]));
   const [markedIndices, setMarkedIndices] = useState<Set<number>>(new Set());
   const [questionTimers, setQuestionTimers] = useState<Record<number, number>>({});
   const [currentQuestionTimer, setCurrentQuestionTimer] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Active section tab (0–3 = PART-A/B/C/D)
+  const [activePart, setActivePart] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -105,6 +123,8 @@ export default function TestPlayer() {
     setCurrentQuestionTimer(0);
     setCurrentQIndex(newIndex);
     setVisitedIndices(prev => new Set(prev).add(newIndex));
+    // sync active part
+    if (test) setActivePart(getPartIndex(newIndex, test.questionsData?.length || 100));
   };
 
   const handleAnswerSelect = (optionIndex: number) => {
@@ -211,7 +231,7 @@ export default function TestPlayer() {
 
   const questions: any[] = test.questionsData || [];
 
-  // Guard: if no questions were loaded (e.g. subcollection fetch issue or old empty doc)
+  // Guard: if no questions were loaded
   if (questions.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center flex-col gap-4 p-6 text-center">
@@ -228,8 +248,28 @@ export default function TestPlayer() {
   }
 
   const currentQ = questions[currentQIndex];
+  const totalQs = questions.length;
 
-  // Instructions Screen (with language selection integrated)
+  // Per-part question ranges
+  const perPart = Math.ceil(totalQs / SSC_SECTIONS.length);
+  const partRanges = SSC_SECTIONS.map((_, idx) => ({
+    start: idx * perPart,
+    end: Math.min((idx + 1) * perPart - 1, totalQs - 1),
+  }));
+
+  // Which section does the current question belong to?
+  const currentPartIndex = getPartIndex(currentQIndex, totalQs);
+  const currentSection = SSC_SECTIONS[currentPartIndex];
+
+  // Does this question have a passage/comprehension text?
+  const passageText: string = safeText(
+    selectedLanguage === "hindi"
+      ? (currentQ.passage_hindi || currentQ.passage || currentQ.comprehension || "")
+      : (currentQ.passage || currentQ.comprehension || currentQ.passage_text || "")
+  );
+  const hasPassage = passageText.trim().length > 0;
+
+  // ─── INSTRUCTIONS SCREEN ──────────────────────────────────────────────────
   if (!isStarted) {
     const isHindi = selectedLanguage === "hindi";
     return (
@@ -348,372 +388,527 @@ export default function TestPlayer() {
     );
   }
 
-  // -------------------------------------------------------------
-  // Test Player Screen (Testbook Redesign)
-  // -------------------------------------------------------------
+  // ─── OPTION RENDERER (shared) ────────────────────────────────────────────
+  const renderOptions = (opts: any[], isCompact = false) => {
+    return (
+      <div className={`space-y-2 ${isCompact ? "" : "mt-4"}`}>
+        {opts.map((option: any, i: number) => {
+          const currentLetter = ["A", "B", "C", "D"][i];
+          const isSelected = answers[currentQIndex] === currentLetter;
+
+          return (
+            <button
+              key={i}
+              onClick={() => handleAnswerSelect(i)}
+              disabled={isSubmitted}
+              className={`group w-full flex items-start p-3 rounded border transition-all text-left ${
+                isSelected
+                  ? "bg-[#e8f4fb] border-[#5b9bd5] shadow-sm"
+                  : "bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              {/* Radio circle */}
+              <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 mr-3 transition-all ${
+                isSelected ? "border-[#5b9bd5] bg-[#5b9bd5]" : "border-slate-400"
+              }`} />
+              <span className={`text-sm leading-snug ${isSelected ? "text-[#1a4571] font-medium" : "text-slate-700"}`}>
+                {(() => {
+                  const s = safeText(option);
+                  const hasUrl = /https?:\/\//i.test(s);
+                  if (!hasUrl) return s;
+                  const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
+                  return parts.map((part, pi) => {
+                    if (/^https?:\/\//i.test(part.trim())) {
+                      return (
+                        <div key={pi} className="mt-2 rounded overflow-hidden border border-slate-200 bg-white p-1 max-w-[220px] shadow-sm">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={toDirectImageUrl(part.trim())} alt={`Option figure ${pi}`} className="w-full h-auto object-contain" />
+                        </div>
+                      );
+                    }
+                    return <span key={pi} className="whitespace-pre-wrap">{part}</span>;
+                  });
+                })()}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ─── TEST PLAYER SCREEN ───────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f1f3f6] flex flex-col font-sans text-slate-900">
-      
-      {/* 1. Top Header */}
-      <header className="bg-white border-b border-slate-200 h-14 flex items-center justify-between px-4 sticky top-0 z-[100] shadow-sm">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="bg-primary p-1 rounded-lg">
-              <Star className="h-4 w-4 text-white fill-white" />
-            </div>
-            <span className="text-lg font-black tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">SarkariStaar</span>
-          </Link>
-          <div className="h-6 w-[1px] bg-slate-200 hidden md:block" />
-          <h2 className="text-sm font-bold text-slate-600 hidden md:block max-w-[400px] truncate">
-            {test.paperName || `${test.categoryId} - Mock ${test.testNumber}`}
-          </h2>
+    <div className="min-h-screen bg-[#f1f3f6] flex flex-col font-sans text-slate-900" style={{ fontSize: 13 }}>
+
+      {/* ══════════════════════════════════════════════════════
+          1. TOP HEADER  (SYMBOLS | INSTRUCTIONS | OVERALL TEST SUMMARY  +  nav buttons)
+         ══════════════════════════════════════════════════════ */}
+      <header className="bg-white border-b border-slate-300" style={{ boxShadow: "0 1px 3px rgba(0,0,0,.08)" }}>
+
+        {/* Sub-bar: SYMBOLS | INSTRUCTIONS | OVERALL TEST SUMMARY */}
+        <div className="flex items-center border-b border-slate-200 px-3 h-7 text-[11px] font-bold gap-0">
+          <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] border-r border-slate-200 transition-colors">SYMBOLS</button>
+          <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] border-r border-slate-200 transition-colors" onClick={() => setIsStarted(false)}>INSTRUCTIONS</button>
+          <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] transition-colors">OVERALL TEST SUMMARY</button>
+
+          <div className="ml-auto flex items-center gap-1 text-slate-500 font-semibold">
+            <span>Total Questions Answered:</span>
+            <span className="text-slate-800 font-black ml-1">
+              {Object.keys(answers).filter(k => !markedIndices.has(Number(k))).length}
+            </span>
+          </div>
         </div>
 
-        {!isSubmitted && (
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-4 py-1.5 rounded-md shadow-inner">
-              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Time Left</span>
-              <div className="flex items-center gap-1 font-mono font-bold text-lg text-slate-700">
-                <span className="bg-slate-700 text-white px-1 rounded-sm">00</span>
-                <span>:</span>
-                <span className="bg-slate-700 text-white px-1 rounded-sm">{String(Math.floor(timeLeft / 60)).padStart(2, '0')}</span>
-                <span>:</span>
-                <span className="bg-slate-700 text-white px-1 rounded-sm">{String(timeLeft % 60).padStart(2, '0')}</span>
-              </div>
-            </div>
-            <div className="hidden lg:flex items-center gap-2">
-              <button 
-                onClick={() => {
-                  if (document.fullscreenElement) document.exitFullscreen();
-                  else document.documentElement.requestFullscreen();
-                }}
-                className="px-3 py-1.5 text-xs font-bold border border-sky-600 text-sky-600 rounded hover:bg-sky-50 transition-colors"
-              >
-                Switch Full Screen
-              </button>
-              <button 
-                onClick={() => setIsPaused(!isPaused)}
-                className="px-3 py-1.5 text-xs font-bold border border-sky-600 text-sky-600 rounded hover:bg-sky-50 transition-colors"
-              >
-                {isPaused ? "Resume" : "Pause"}
-              </button>
-            </div>
+        {/* Main header row */}
+        <div className="flex items-center gap-0 px-2 h-10">
+          {/* PART buttons */}
+          <div className="flex items-center gap-1 mr-4">
+            {SSC_SECTIONS.map((sec, idx) => {
+              const isActive = activePart === idx;
+              return (
+                <button
+                  key={sec.part}
+                  onClick={() => {
+                    setActivePart(idx);
+                    // jump to first question in that part
+                    handleNextPrev(partRanges[idx].start);
+                  }}
+                  style={{
+                    background: isActive ? PART_COLORS[idx] : "#e8e8e8",
+                    color: isActive ? "#fff" : "#444",
+                    borderRadius: 3,
+                    fontWeight: 700,
+                    fontSize: 11,
+                    padding: "2px 10px",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background .15s",
+                  }}
+                >
+                  {sec.part}
+                </button>
+              );
+            })}
           </div>
-        )}
+
+          {/* Previous */}
+          <button
+            onClick={() => handleNextPrev(Math.max(0, currentQIndex - 1))}
+            disabled={currentQIndex === 0}
+            style={{
+              height: 28,
+              padding: "0 14px",
+              fontSize: 11,
+              fontWeight: 700,
+              background: "#f0f0f0",
+              color: "#333",
+              border: "1px solid #ccc",
+              borderRadius: 3,
+              cursor: currentQIndex === 0 ? "not-allowed" : "pointer",
+              opacity: currentQIndex === 0 ? 0.5 : 1,
+              marginRight: 4,
+            }}
+          >
+            Previous
+          </button>
+
+          {/* Mark for Review */}
+          <button
+            onClick={() => {
+              setMarkedIndices(prev => new Set(prev).add(currentQIndex));
+              handleNextPrev(Math.min(totalQs - 1, currentQIndex + 1));
+            }}
+            style={{
+              height: 28,
+              padding: "0 14px",
+              fontSize: 11,
+              fontWeight: 700,
+              background: "#f0f0f0",
+              color: "#333",
+              border: "1px solid #ccc",
+              borderRadius: 3,
+              cursor: "pointer",
+              marginRight: 4,
+            }}
+          >
+            Mark for Review
+          </button>
+
+          {/* Save & Next */}
+          <button
+            onClick={() => {
+              if (markedIndices.has(currentQIndex)) {
+                setMarkedIndices(prev => { const n = new Set(prev); n.delete(currentQIndex); return n; });
+              }
+              handleNextPrev(Math.min(totalQs - 1, currentQIndex + 1));
+            }}
+            style={{
+              height: 28,
+              padding: "0 14px",
+              fontSize: 11,
+              fontWeight: 700,
+              background: "#4a90d9",
+              color: "#fff",
+              border: "none",
+              borderRadius: 3,
+              cursor: "pointer",
+              marginRight: 4,
+            }}
+          >
+            Save &amp; Next
+          </button>
+
+          {/* Submit Test */}
+          {!isSubmitted && (
+            <button
+              onClick={handleSubmit}
+              style={{
+                height: 28,
+                padding: "0 14px",
+                fontSize: 11,
+                fontWeight: 700,
+                background: "#e05c00",
+                color: "#fff",
+                border: "none",
+                borderRadius: 3,
+                cursor: "pointer",
+              }}
+            >
+              Submit Test
+            </button>
+          )}
+
+          {/* Timer */}
+          {!isSubmitted && (
+            <div className="ml-auto flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded" style={{ fontSize: 12 }}>
+              <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <span className="font-mono font-bold text-slate-700">
+                {String(Math.floor(timeLeft / 3600)).padStart(2, '0')}:
+                {String(Math.floor((timeLeft % 3600) / 60)).padStart(2, '0')}:
+                {String(timeLeft % 60).padStart(2, '0')}
+              </span>
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* 2. Section Tabs Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 flex items-center h-10 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Sections |</span>
-          <button className="px-6 h-7 flex items-center justify-center bg-[#0e6f8a] text-white text-xs font-bold rounded shadow-sm">
-            Test
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Main Content Wrapper */}
+      {/* ══════════════════════════════════════════════════════
+          2. MAIN CONTENT  (question area + right sidebar)
+         ══════════════════════════════════════════════════════ */}
       <div className="flex-1 flex overflow-hidden">
-        
-        {/* Left: Question Area */}
-        <main className="flex-1 flex flex-col min-w-0 bg-white mr-[1px]">
-          
-          {/* Question Header Info */}
-          <div className="border-b border-slate-100 p-3 px-6 flex justify-between items-center bg-white">
-            <h3 className="font-black text-slate-800 tracking-tight">Question No. {currentQIndex + 1}</h3>
-            
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase">Marks</span>
-                 <div className="flex gap-1.5">
-                    <span className="bg-emerald-500 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">+2.0</span>
-                    <span className="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">-0.5</span>
-                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase">Time spent</span>
-                 <span className="font-mono font-bold text-slate-700 text-sm">
-                   {String(Math.floor(currentQuestionTimer / 60)).padStart(2, '0')}:{String(currentQuestionTimer % 60).padStart(2, '0')}
-                 </span>
+
+        {/* ── LEFT / CENTRE: Question Area ───────────────────── */}
+        <main className="flex-1 flex flex-col min-w-0 bg-white" style={{ borderRight: "1px solid #d8dde4" }}>
+
+          {/* Question No. and meta row */}
+          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 bg-white" style={{ minHeight: 38 }}>
+            <span className="font-bold text-slate-800" style={{ fontSize: 13 }}>Question No. {currentQIndex + 1}</span>
+
+            <div className="flex items-center gap-4">
+              {/* Select Language */}
+              <div className="flex items-center gap-1.5" style={{ fontSize: 11 }}>
+                <span className="text-slate-500 font-semibold">Select Language</span>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value as any)}
+                  className="border border-slate-300 rounded px-1.5 py-0.5 bg-white text-slate-700 font-bold focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  style={{ fontSize: 11 }}
+                >
+                  <option value="english">English</option>
+                  <option value="hindi">Hindi</option>
+                </select>
               </div>
 
-              <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-bold text-slate-400 uppercase">View in </span>
-                 <select 
-                   value={selectedLanguage}
-                   onChange={(e) => setSelectedLanguage(e.target.value as any)}
-                   className="text-xs border border-slate-200 rounded px-2 py-1 bg-slate-50 font-bold focus:outline-none focus:ring-1 focus:ring-primary"
-                 >
-                   <option value="english">English</option>
-                   <option value="hindi">Hindi</option>
-                 </select>
-              </div>
-
-              <button className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors">
+              {/* Report */}
+              <button className="flex items-center gap-1 text-slate-500 hover:text-rose-500 transition-colors" style={{ fontSize: 11, fontWeight: 600 }}>
                 <Flag className="w-3 h-3" /> Report
               </button>
             </div>
           </div>
 
-          {/* Actual Question Display */}
-          <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar">
-            <div className="max-w-4xl mx-auto space-y-10">
-              <p className="text-lg md:text-xl font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
-                {selectedLanguage === 'hindi' ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
-              </p>
-
-              {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
-                <div className="rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={toDirectImageUrl(safeText(currentQ.imageUrl))} alt="Question figure" className="max-h-[350px] object-contain mx-auto" />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(selectedLanguage === 'hindi' && currentQ.options_hindi?.some((o: any) => o) ? currentQ.options_hindi : currentQ.options).map((option: any, i: number) => {
-                  const currentLetter = ["A", "B", "C", "D"][i];
-                  const isSelected = answers[currentQIndex] === currentLetter;
-                  
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleAnswerSelect(i)}
-                      disabled={isSubmitted}
-                      className={`group flex items-center p-4 rounded-full border-2 transition-all text-left ${
-                        isSelected 
-                          ? 'bg-sky-50 border-sky-500 shadow-md ring-1 ring-sky-500/20' 
-                          : 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm shrink-0 transition-all ${
-                        isSelected 
-                          ? 'bg-sky-500 border-sky-500 text-white shadow-sm' 
-                          : 'border-slate-300 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-500'
-                      }`}>
-                        {i + 1}
-                      </div>
-                      <span className={`ml-4 text-base font-medium transition-colors flex flex-col gap-2 ${isSelected ? 'text-sky-900' : 'text-slate-600 group-hover:text-slate-800'}`}>
-                        {(() => {
-                          const s = safeText(option);
-                          const hasUrl = /https?:\/\//i.test(s);
-                          if (!hasUrl) return s;
-
-                          const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
-                          return parts.map((part, i) => {
-                            if (/^https?:\/\//i.test(part.trim())) {
-                              return (
-                                <div key={i} className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-white p-1 max-w-[250px] shadow-sm">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img 
-                                    src={toDirectImageUrl(part.trim())} 
-                                    alt={`Option figure ${i}`} 
-                                    className="w-full h-auto object-contain"
-                                  />
-                                </div>
-                              );
-                            }
-                            return <span key={i} className="whitespace-pre-wrap">{part}</span>;
-                          });
-                        })()}
+          {/* ── COMPREHENSION SPLIT LAYOUT or NORMAL LAYOUT ─── */}
+          {hasPassage ? (
+            /* ── SPLIT: passage left, question right ─ */
+            <div className="flex-1 flex overflow-hidden">
+              {/* Passage panel */}
+              <div className="w-[45%] border-r border-slate-200 overflow-y-auto custom-scrollbar p-5" style={{ background: "#fafafa" }}>
+                {/* Comprehension label */}
+                <div className="mb-3">
+                  <span className="font-bold text-slate-700 underline" style={{ fontSize: 13 }}>Comprehension:</span>
+                  {/* Find the range label - e.g. Que No. 22 - 25 */}
+                  {(() => {
+                    const partStart = partRanges[currentPartIndex].start;
+                    const partEnd = partRanges[currentPartIndex].end;
+                    return (
+                      <span className="ml-2 text-slate-500" style={{ fontSize: 12 }}>
+                        (Que No. {partStart + 1} - {partEnd + 1})
                       </span>
-                    </button>
-                  );
-                })}
+                    );
+                  })()}
+                </div>
+
+                <p className="font-bold text-slate-800 mb-3" style={{ fontSize: 13 }}>Read the comprehension and answer below:</p>
+
+                <div className="text-slate-800 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 13 }}>
+                  {passageText}
+                </div>
+
+                {/* Passage image if any */}
+                {currentQ.passageImageUrl && toDirectImageUrl(safeText(currentQ.passageImageUrl)).startsWith('http') && (
+                  <div className="mt-4 rounded overflow-hidden border border-slate-200 bg-white p-2 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={toDirectImageUrl(safeText(currentQ.passageImageUrl))} alt="Passage figure" className="max-h-[300px] object-contain mx-auto" />
+                  </div>
+                )}
               </div>
 
-              {isSubmitted && (selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) && (
-                <div className="mt-12 p-8 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 shadow-inner">
-                  <div className="flex items-center gap-2 text-sky-700">
-                    <BookOpen className="w-5 h-5" />
-                    <h3 className="font-black uppercase tracking-[0.15em] text-xs">Solution Explanation</h3>
+              {/* Scrollable divider for passage (browser default) */}
+              <div className="w-1.5 bg-slate-200 cursor-col-resize flex-shrink-0" />
+
+              {/* Question + options panel */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col">
+                {/* Question label */}
+                <p className="font-bold text-slate-800 underline mb-3" style={{ fontSize: 13 }}>Question:</p>
+
+                <p className="text-slate-800 leading-snug whitespace-pre-wrap mb-4" style={{ fontSize: 13 }}>
+                  {selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
+                </p>
+
+                {/* Question image */}
+                {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
+                  <div className="rounded overflow-hidden border border-slate-100 shadow-sm bg-slate-50 p-2 mb-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={toDirectImageUrl(safeText(currentQ.imageUrl))} alt="Question figure" className="max-h-[200px] object-contain mx-auto" />
                   </div>
-                  <div className="text-slate-700 leading-relaxed whitespace-pre-wrap prose prose-slate max-w-none">
-                    {safeText(selectedLanguage === 'hindi' ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
+                )}
+
+                {/* Options */}
+                {renderOptions(
+                  selectedLanguage === "hindi" && currentQ.options_hindi?.some((o: any) => o)
+                    ? currentQ.options_hindi
+                    : currentQ.options,
+                  true
+                )}
+
+                {/* Explanation (post-submit) */}
+                {isSubmitted && (selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) && (
+                  <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded space-y-2 shadow-inner">
+                    <div className="flex items-center gap-2 text-sky-700">
+                      <BookOpen className="w-4 h-4" />
+                      <span className="font-black uppercase tracking-widest" style={{ fontSize: 10 }}>Solution Explanation</span>
+                    </div>
+                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 12 }}>
+                      {safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
+                    </div>
                   </div>
-                  {currentQ.solutionImageUrl && toDirectImageUrl(safeText(currentQ.solutionImageUrl)).startsWith('http') && (
-                    <div className="mt-6 rounded-xl overflow-hidden border border-slate-200 bg-white p-4 shadow-sm">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={toDirectImageUrl(safeText(currentQ.solutionImageUrl))} alt="Solution diagram" className="max-h-[400px] object-contain mx-auto" />
+                )}
+              </div>
+            </div>
+          ) : (
+            /* ── NORMAL LAYOUT (no passage) ── */
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+              <div className="max-w-3xl mx-auto">
+                <p className="text-slate-800 leading-relaxed whitespace-pre-wrap mb-5" style={{ fontSize: 15, fontWeight: 500 }}>
+                  {selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
+                </p>
+
+                {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
+                  <div className="rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 p-4 mb-5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={toDirectImageUrl(safeText(currentQ.imageUrl))} alt="Question figure" className="max-h-[350px] object-contain mx-auto" />
+                  </div>
+                )}
+
+                {renderOptions(
+                  selectedLanguage === "hindi" && currentQ.options_hindi?.some((o: any) => o)
+                    ? currentQ.options_hindi
+                    : currentQ.options
+                )}
+
+                {isSubmitted && (selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) && (
+                  <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-inner">
+                    <div className="flex items-center gap-2 text-sky-700">
+                      <BookOpen className="w-5 h-5" />
+                      <h3 className="font-black uppercase tracking-[0.15em]" style={{ fontSize: 11 }}>Solution Explanation</h3>
+                    </div>
+                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap prose prose-slate max-w-none" style={{ fontSize: 13 }}>
+                      {safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
+                    </div>
+                    {currentQ.solutionImageUrl && toDirectImageUrl(safeText(currentQ.solutionImageUrl)).startsWith('http') && (
+                      <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={toDirectImageUrl(safeText(currentQ.solutionImageUrl))} alt="Solution diagram" className="max-h-[400px] object-contain mx-auto" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bottom action row for non-passage */}
+                {!isSubmitted && (
+                  <div className="pt-6 mt-6 border-t border-slate-200 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setMarkedIndices(prev => new Set(prev).add(currentQIndex));
+                          handleNextPrev(Math.min(totalQs - 1, currentQIndex + 1));
+                        }}
+                        className="px-4 py-1.5 bg-sky-100 text-sky-700 border border-sky-200 rounded text-xs font-black uppercase tracking-wider hover:bg-sky-200 transition-all"
+                      >
+                        Mark for Review &amp; Next
+                      </button>
+                      <button
+                        onClick={() => setAnswers(prev => { const next = { ...prev }; delete next[currentQIndex]; return next; })}
+                        className="px-4 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all"
+                      >
+                        Clear Response
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={toggleSave}
+                        disabled={isSaving}
+                        className={`px-3 py-1.5 rounded border font-bold flex items-center gap-1 text-xs ${
+                          savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`)
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "bg-muted border-transparent text-muted-foreground hover:bg-muted/80"
+                        }`}
+                      >
+                        <BookmarkPlus className={`w-3.5 h-3.5 ${savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`) ? "fill-primary" : ""}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
+
+        {/* ── RIGHT: Sidebar ────────────────────────────────── */}
+        <aside className="w-72 bg-[#eef1f5] border-l border-slate-200 flex flex-col" style={{ boxShadow: "-2px 0 6px rgba(0,0,0,.04)" }}>
+
+          {/* Section palette header with triangle arrow */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-slate-200">
+            {/* Play/triangle icon */}
+            <span style={{ color: "#1a6ea8", fontSize: 14 }}>▶</span>
+            <span className="font-black text-slate-700" style={{ fontSize: 12 }}>
+              {currentSection.label}
+            </span>
+          </div>
+
+          {/* Question number grid */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+            {/* Per-PART palette */}
+            {SSC_SECTIONS.map((sec, partIdx) => {
+              const { start, end } = partRanges[partIdx];
+              const partQs = questions.slice(start, end + 1);
+
+              return (
+                <div key={sec.part} className="mb-0">
+                  {/* Section header row */}
+                  <div
+                    className="flex items-center px-3 py-1.5 border-b border-t border-slate-200"
+                    style={{ background: activePart === partIdx ? "#dbeafe" : "#f0f3f8", fontSize: 11 }}
+                  >
+                    <span className="font-bold text-slate-700">{sec.label}</span>
+                  </div>
+
+                  {/* Number grid */}
+                  <div className="p-2 grid grid-cols-5 gap-1.5">
+                    {partQs.map((_, relIdx) => {
+                      const absIdx = start + relIdx;
+                      const isVisited = visitedIndices.has(absIdx);
+                      const isAnswered = !!answers[absIdx];
+                      const isMarked = markedIndices.has(absIdx);
+                      const isCurrent = currentQIndex === absIdx;
+
+                      let btnStyle: React.CSSProperties = {
+                        background: "#fff",
+                        color: "#555",
+                        border: "1px solid #bbb",
+                        borderRadius: 3,
+                      };
+
+                      if (isMarked && isAnswered) {
+                        btnStyle = { background: "#7c3aed", color: "#fff", border: "none", borderRadius: 3 };
+                      } else if (isMarked) {
+                        btnStyle = { background: "#7c3aed", color: "#fff", border: "none", borderRadius: "50%" };
+                      } else if (isAnswered) {
+                        btnStyle = { background: "#16a34a", color: "#fff", border: "none", borderRadius: 3 };
+                      } else if (isVisited) {
+                        btnStyle = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 3 };
+                      }
+
+                      if (isCurrent) {
+                        btnStyle = { ...btnStyle, outline: "2px solid #38bdf8", outlineOffset: 1 };
+                      }
+
+                      return (
+                        <button
+                          key={absIdx}
+                          onClick={() => handleNextPrev(absIdx)}
+                          style={{
+                            ...btnStyle,
+                            width: "100%",
+                            aspectRatio: "1",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all .1s",
+                          }}
+                        >
+                          {absIdx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Per-section stats (like PART-D Analysis in screenshot) */}
+                  {partIdx === SSC_SECTIONS.length - 1 && (
+                    <div className="mx-2 mb-2 border border-slate-300 rounded overflow-hidden" style={{ fontSize: 11 }}>
+                      <div className="bg-slate-200 px-2 py-1 font-black text-slate-700 uppercase tracking-wide" style={{ fontSize: 10 }}>
+                        {sec.part} Analysis
+                      </div>
+                      {[
+                        { label: "Answered", count: Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end && !markedIndices.has(Number(k))).length, color: "#16a34a" },
+                        { label: "Not Answered", count: (end - start + 1) - Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end).length, color: "#e05c00" },
+                        { label: "Mark for Review", count: Array.from(markedIndices).filter(i => i >= start && i <= end).length, color: "#7c3aed" },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center justify-between px-2 py-1 border-t border-slate-200 bg-white">
+                          <span className="text-slate-600">{item.label}</span>
+                          <span className="font-black" style={{ color: item.color }}>{item.count}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* 4. Action Navigation Group */}
-              {!isSubmitted && (
-                <div className="pt-8 mt-12 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => {
-                        setMarkedIndices(prev => new Set(prev).add(currentQIndex));
-                        handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1));
-                      }}
-                      className="px-6 py-2 bg-sky-100 text-sky-700 border border-sky-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-sky-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
-                    >
-                      Mark for Review & Next
-                    </button>
-                    <button 
-                      onClick={() => setAnswers(prev => {
-                        const next = { ...prev };
-                        delete next[currentQIndex];
-                        return next;
-                      })}
-                      className="px-6 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded shadow-sm text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all hover:translate-y-[-1px] active:translate-y-0"
-                    >
-                      Clear Response
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-2">
-                       <button 
-                        onClick={() => handleNextPrev(Math.max(0, currentQIndex - 1))}
-                        disabled={currentQIndex === 0}
-                        className="px-4 py-2 text-slate-400 hover:text-slate-600 font-bold transition-all disabled:opacity-30 flex items-center gap-1"
-                       >
-                        <ChevronLeft className="w-4 h-4" />
-                       </button>
-                       <button 
-                        onClick={() => {
-                           toggleSave();
-                        }}
-                        disabled={isSaving}
-                        className={`px-4 py-2 rounded-md transition-all flex items-center gap-2 border font-bold ${
-                          savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`)
-                            ? 'bg-primary/10 text-primary border-primary/30' 
-                            : 'bg-muted hover:bg-muted/80 border-transparent text-muted-foreground'
-                        }`}
-                       >
-                        <BookmarkPlus className={`w-4 h-4 ${savedItemIds.includes(currentQ.id || `mock-${test.id}-${currentQIndex}`) ? 'fill-primary' : ''}`} />
-                       </button>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        // Fix: remove from marked if user saves answer
-                        if (markedIndices.has(currentQIndex)) {
-                          setMarkedIndices(prev => {
-                            const next = new Set(prev);
-                            next.delete(currentQIndex);
-                            return next;
-                          });
-                        }
-                        handleNextPrev(Math.min(questions.length - 1, currentQIndex + 1));
-                      }}
-                      className="px-8 py-2.5 bg-[#00b2ca] text-white rounded shadow-[0_2px_8px_rgba(0,178,202,0.3)] text-xs font-black uppercase tracking-widest hover:bg-[#009fb5] transition-all hover:translate-y-[-1px] active:translate-y-0"
-                    >
-                      Save & Next
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
-
-        {/* Right: Sidebar */}
-        <aside className="w-80 bg-[#eef1f5] border-l border-slate-200 flex flex-col shadow-[-4px_0_10px_rgba(0,0,0,0.02)]">
-          
-          {/* User Profile */}
-          <div className="p-4 bg-white border-b border-slate-200 flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center text-white shadow-inner">
-               <UserCircle className="w-7 h-7" />
-             </div>
-             <div className="min-w-0">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-none mb-1">Candidate</p>
-                <p className="text-sm font-black text-slate-700 truncate">{user?.displayName || "Student User"}</p>
-             </div>
+              );
+            })}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-            
-            {/* Status Legend */}
-            <div className="p-4 bg-[#f8fafc] border-b border-slate-200 grid grid-cols-2 gap-3 pb-6">
-              {[
-                { label: "Answered", count: Object.keys(answers).filter(k => !markedIndices.has(Number(k))).length, color: "bg-emerald-500" },
-                { label: "Marked", count: Array.from(markedIndices).filter(idx => !answers[idx]).length, color: "bg-violet-600" },
-                { label: "Not Visited", count: questions.length - visitedIndices.size, color: "bg-white border border-slate-300" },
-                { label: "Not Answered", count: visitedIndices.size - Object.keys(answers).length - Array.from(markedIndices).filter(idx => !answers[idx]).length, color: "bg-rose-500" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${item.color} ${item.label === "Not Visited" ? "text-slate-400" : "text-white shadow-sm"}`}>
-                    {item.count}
-                  </div>
-                  <span className="text-[10px] font-black uppercase text-slate-500 tracking-tight">{item.label}</span>
-                </div>
-              ))}
-              <div className="flex items-center gap-2 col-span-2">
-                <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center text-[10px] text-white font-bold shadow-sm relative overflow-hidden">
-                  <CheckCircle2 className="w-3 h-3 text-white" />
-                </div>
-                <span className="text-[10px] font-black uppercase text-slate-500 tracking-tight">Marked and answered: <span className="ml-1 text-slate-800">{Object.keys(answers).filter(k => markedIndices.has(Number(k))).length}</span></span>
-              </div>
-            </div>
-
-            {/* Section Palette Header */}
-            <div className="p-3 bg-sky-100 border-b border-sky-200 text-sky-800 text-[10px] font-black uppercase tracking-[0.2em] px-4 flex justify-between items-center">
-              <span>Section: Test</span>
-              <div className="h-1 flex-1 mx-2 bg-sky-200/50 rounded-full overflow-hidden">
-                 <div className="h-full bg-sky-500 transition-all duration-500" style={{ width: `${(visitedIndices.size / questions.length) * 100}%` }} />
-              </div>
-            </div>
-
-            {/* Question Grid */}
-            <div className="p-4 grid grid-cols-5 gap-2 content-start">
-               {questions.map((_, i) => {
-                  const isVisited = visitedIndices.has(i);
-                  const isAnswered = !!answers[i];
-                  const isMarked = markedIndices.has(i);
-                  const isCurrent = currentQIndex === i;
-                  
-                  let btnBg = "bg-white text-slate-400 border border-slate-300";
-                  let icon = null;
-                  
-                  if (isMarked && isAnswered) {
-                    btnBg = "bg-violet-600 text-white shadow-sm";
-                    icon = <CheckCircle2 className="w-2.5 h-2.5 absolute bottom-0 right-0 bg-emerald-500 rounded-full text-white" />;
-                  } else if (isMarked) {
-                    btnBg = "bg-violet-600 text-white shadow-sm rounded-full";
-                  } else if (isAnswered) {
-                    btnBg = "bg-emerald-500 text-white shadow-sm rounded-t-xl rounded-b-sm";
-                  } else if (isVisited) {
-                    btnBg = "bg-rose-500 text-white shadow-sm rounded-t-sm rounded-b-xl";
-                  }
-                  
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleNextPrev(i)}
-                      className={`relative w-full aspect-square flex items-center justify-center text-xs font-black transition-all hover:scale-105 active:scale-95 ${btnBg} ${isCurrent ? 'ring-2 ring-sky-400 ring-offset-1 border-transparent' : 'border border-slate-200'}`}
-                    >
-                      {i + 1}
-                      {icon}
-                    </button>
-                  );
-               })}
-            </div>
-          </div>
-
-          {/* Sidebar Tools Footer */}
+          {/* Sidebar footer tools */}
           <div className="p-2 gap-1 grid grid-cols-2 bg-white border-t border-slate-200">
-             <button className="h-10 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all shadow-sm">Question Paper</button>
-             <button 
-               onClick={() => setIsStarted(false)}
-               className="h-10 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all shadow-sm"
-             >
-               Instructions
-             </button>
-             <button 
-               onClick={handleSubmit}
-               className="col-span-2 h-10 text-[10px] font-black uppercase bg-sky-500 text-white rounded hover:bg-sky-600 transition-all shadow-md mt-1 active:translate-y-0.5"
-             >
-               Submit Test
-             </button>
+            <button className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all">
+              Question Paper
+            </button>
+            <button
+              onClick={() => setIsStarted(false)}
+              className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all"
+            >
+              Instructions
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="col-span-2 h-9 text-[10px] font-black uppercase bg-sky-500 text-white rounded hover:bg-sky-600 transition-all shadow-md mt-1"
+            >
+              Submit Test
+            </button>
           </div>
-
         </aside>
       </div>
 
+      {/* ── SUBMIT MODAL ─────────────────────────────────────── */}
       {isSubmitted && scoreData && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center space-y-8 animate-in zoom-in-95 duration-500">
