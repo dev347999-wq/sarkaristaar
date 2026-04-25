@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getMockTest, saveTestAttempt, saveQuestion, normalizeSubject, getSavedQuestions, deleteSavedQuestion } from "@/lib/database";
@@ -55,6 +55,9 @@ export default function TestPlayer() {
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Ref to always hold the latest handleSubmit to avoid stale closure in timer
+  const handleSubmitRef = useRef<() => void>(() => {});
+
   // Testbook-style UI states
   const [visitedIndices, setVisitedIndices] = useState<Set<number>>(new Set([0]));
   const [markedIndices, setMarkedIndices] = useState<Set<number>>(new Set());
@@ -103,7 +106,8 @@ export default function TestPlayer() {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit();
+          // Use ref to avoid stale closure capturing old handleSubmit
+          handleSubmitRef.current();
           return 0;
         }
         return prev - 1;
@@ -147,11 +151,20 @@ export default function TestPlayer() {
         await deleteSavedQuestion(user.uid, qId);
         setSavedItemIds(prev => prev.filter(id => id !== qId));
       } else {
+        // Map raw question fields to the SavedQuestion schema expected by saveQuestion()
         await saveQuestion(user.uid, {
-          ...currentQ,
           questionId: qId,
-          mockTestId: params.id as string,
-          mockTestName: test.paperName
+          subject: normalizeSubject(currentQ.subject || currentQ.section || test.paperName || "General"),
+          topic: currentQ.topic || currentQ.section || test.paperName || "Mock Test",
+          questionText: currentQ.question || currentQ.question_text || "",
+          questionHindi: currentQ.question_hindi,
+          options: currentQ.options || [],
+          optionsHindi: currentQ.options_hindi,
+          correctAnswer: currentQ.answer || currentQ.correct_answer || "",
+          answerHindi: currentQ.answer_hindi,
+          imageUrl: currentQ.imageUrl || currentQ.image_url,
+          explanation: currentQ.explanation,
+          explanationHindi: currentQ.explanation_hindi,
         });
         setSavedItemIds(prev => [...prev, qId]);
       }
@@ -172,8 +185,11 @@ export default function TestPlayer() {
     
     const questions = test.questionsData;
     
+    // Capture current answers snapshot to avoid stale state in async context
+    const answersSnapshot = answers;
+    
     questions.forEach((q: any, i: number) => {
-      const uLetter = answers[i];
+      const uLetter = answersSnapshot[i];
       if (!uLetter) {
         unattempted++;
       } else if (uLetter.trim().toUpperCase() === q.answer.trim().toUpperCase()) {
@@ -196,7 +212,7 @@ export default function TestPlayer() {
       totalMarks: questions.length * 2,
       accuracy: accuracyVal,
       timeSpentStr,
-      answers,
+      answers: answersSnapshot,
       language: selectedLanguage,
       testUploadedAt: test.lastUploadedAt || null
     };
@@ -213,9 +229,16 @@ export default function TestPlayer() {
 
     setScoreData(resultsForUi);
     if (user) {
-      await saveTestAttempt(user.uid, resultsForDb);
+      try {
+        await saveTestAttempt(user.uid, resultsForDb);
+      } catch (saveErr) {
+        console.error("Failed to save test attempt:", saveErr);
+      }
     }
   };
+
+  // Keep ref in sync so the timer callback always calls the latest handleSubmit
+  handleSubmitRef.current = handleSubmit;
 
   if (loading || authLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading Test Engine...</div>;
