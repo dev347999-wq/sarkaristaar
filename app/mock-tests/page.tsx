@@ -264,8 +264,6 @@ const CATEGORY_STRUCTURE = {
     { label: "Prev. '25 (Mains)", key: "SSC Previous Tier 2 2025" },
     { label: "Prev. '24 (Pre)", key: "SSC Previous 2024" },
     { label: "Prev. '24 (Mains)", key: "SSC Previous Tier 2 2024" },
-    { label: "Prev. '23 (Pre)", key: "SSC Previous 2023" },
-    { label: "Prev. '23 (Mains)", key: "SSC Previous Tier 2 2023" }
   ],
   "RRB NTPC": [
     { label: "CBT 1", key: "RRB NTPC CBT 1" },
