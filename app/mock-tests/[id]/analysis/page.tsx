@@ -34,9 +34,21 @@ export default function TestAnalysis() {
       
       try {
         const testId = decodeURIComponent(params.id as string);
-        const [testData, attemptData, savedQuestions] = await Promise.all([
+
+        // ✅ Check sessionStorage first for a freshly-submitted attempt
+        // (written by the test player immediately on submit, before the DB write)
+        let cachedAttempt: any = null;
+        try {
+          const raw = sessionStorage.getItem(`attempt_${testId}`);
+          if (raw) {
+            cachedAttempt = JSON.parse(raw);
+            // Clear so that subsequent visits read from the DB
+            sessionStorage.removeItem(`attempt_${testId}`);
+          }
+        } catch (_) { /* sessionStorage unavailable */ }
+
+        const [testData, savedQuestions] = await Promise.all([
            getMockTest(testId),
-           getTestAttempt(user.uid, testId),
            getSavedQuestions(user.uid)
         ]);
         
@@ -44,6 +56,10 @@ export default function TestAnalysis() {
           setError("Test not found.");
           return;
         }
+
+        // Use cached attempt from session, or fetch from DB
+        const attemptData = cachedAttempt || await getTestAttempt(user.uid, testId);
+
         if (!attemptData) {
           setError("No attempt found. You have not taken this test yet.");
           return;

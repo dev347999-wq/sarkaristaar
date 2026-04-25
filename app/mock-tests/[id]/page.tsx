@@ -54,6 +54,7 @@ export default function TestPlayer() {
   const [scoreData, setScoreData] = useState<any>(null);
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingAttempt, setIsSavingAttempt] = useState(false);
 
   // Ref to always hold the latest handleSubmit to avoid stale closure in timer
   const handleSubmitRef = useRef<() => void>(() => {});
@@ -178,6 +179,7 @@ export default function TestPlayer() {
   const handleSubmit = async () => {
     if (isSubmitted) return;
     setIsSubmitted(true);
+    setIsSavingAttempt(true);
     
     let correct = 0;
     let incorrect = 0;
@@ -224,10 +226,21 @@ export default function TestPlayer() {
       unattempted,
       totalQuestions: questions.length,
       timeTaken: timeTakenSeconds,
-      status: 'completed'
+      status: 'completed',
+      dateCompleted: new Date().toISOString(),
     };
 
     setScoreData(resultsForUi);
+
+    // ✅ Store in sessionStorage immediately so the analysis page always has data
+    // regardless of whether the DB write has finished yet.
+    try {
+      sessionStorage.setItem(
+        `attempt_${decodeURIComponent(params.id as string)}`,
+        JSON.stringify(resultsForUi)
+      );
+    } catch (_) { /* sessionStorage may be unavailable in some browsers */ }
+
     if (user) {
       try {
         await saveTestAttempt(user.uid, resultsForDb);
@@ -235,6 +248,7 @@ export default function TestPlayer() {
         console.error("Failed to save test attempt:", saveErr);
       }
     }
+    setIsSavingAttempt(false);
   };
 
   // Keep ref in sync so the timer callback always calls the latest handleSubmit
@@ -950,9 +964,17 @@ export default function TestPlayer() {
 
               <button 
                 onClick={() => router.push(`/mock-tests/${params.id}/analysis`)}
-                className="w-full h-14 bg-primary text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 active:translate-y-0"
+                disabled={isSavingAttempt}
+                className="w-full h-14 bg-primary text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 active:translate-y-0 disabled:opacity-70 disabled:cursor-wait disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                View Detailed Analysis <ChevronRight className="w-5 h-5" />
+                {isSavingAttempt ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    Saving Results...
+                  </>
+                ) : (
+                  <>View Detailed Analysis <ChevronRight className="w-5 h-5" /></>
+                )}
               </button>
            </div>
         </div>
