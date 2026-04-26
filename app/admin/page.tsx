@@ -215,7 +215,7 @@ export default function AdminPage() {
           }));
 
           // 2. Extract Data from rows using SheetJS to preserve HTML formatting natively
-          const wbSheetJS = XLSX.read(buffer, { type: 'array', cellHTML: true });
+          const wbSheetJS = XLSX.read(arrayBuffer, { type: 'array', cellHTML: true });
           const firstSheetName = wbSheetJS.SheetNames[0];
           const wsSheetJS = wbSheetJS.Sheets[firstSheetName];
           const range = XLSX.utils.decode_range(wsSheetJS['!ref'] || "A1:A1");
