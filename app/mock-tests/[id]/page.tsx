@@ -698,6 +698,11 @@ export default function TestPlayer() {
           </div>
 
           {/* ── COMPREHENSION SPLIT LAYOUT or NORMAL LAYOUT ─── */}
+          <style dangerouslySetInnerHTML={{__html: `
+            .passage-scrollbar::-webkit-scrollbar { width: 12px; }
+            .passage-scrollbar::-webkit-scrollbar-track { background: transparent; border-left: 1px solid #e2e8f0; }
+            .passage-scrollbar::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 12px; border: 2px solid #fafafa; }
+          `}} />
           {hasPassage ? (
             /* ── SPLIT: passage left, question right ─ */
             <div className="flex-1 flex overflow-hidden">
