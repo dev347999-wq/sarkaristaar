@@ -234,6 +234,10 @@ export default function AdminPage() {
                   rowData[header] = cellImages[0]; // Take first image URL
                 } else {
                   rowData[header] = cell.value;
+                  // DEBUG: Check what exceljs thinks is in the cell
+                  if (cell.value && JSON.stringify(cell.value).includes('homonym')) {
+                    alert(`DEBUG INFO FOR "HOMONYM" QUESTION:\n${JSON.stringify(cell.value, null, 2)}`);
+                  }
                 }
               }
             });
