@@ -703,17 +703,7 @@ export default function TestPlayer() {
             <div className="flex-1 flex overflow-hidden">
               {/* Passage panel */}
               <div className="w-[45%] overflow-y-auto passage-scrollbar p-5" style={{ background: "#fafafa" }}>
-                {/* Comprehension label — italic underline like Testbook */}
-                <div className="mb-3">
-                  <span className="italic underline text-slate-700 font-semibold" style={{ fontSize: 13 }}>Comprehension:</span>
-                  {passageRange && (
-                    <span className="ml-2 text-slate-500" style={{ fontSize: 12 }}>
-                      (Que No. {passageRange.first} - {passageRange.last})
-                    </span>
-                  )}
-                </div>
 
-                <p className="font-bold text-slate-800 mb-3" style={{ fontSize: 13 }}>Read the comprehension and answer below:</p>
 
                 <div className="text-slate-800 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 13 }}>
                   {passageText}
