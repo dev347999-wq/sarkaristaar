@@ -483,15 +483,40 @@ export default function TestPlayer() {
          ══════════════════════════════════════════════════════ */}
       <header className="bg-white border-b border-slate-300" style={{ boxShadow: "0 1px 3px rgba(0,0,0,.08)" }}>
 
-        {/* Sub-bar: SYMBOLS | INSTRUCTIONS | OVERALL TEST SUMMARY */}
+        {/* TOP BAR: Logo | Exam Title + Roll No | Timer + Profile avatar */}
+        <div className="flex items-center justify-between px-4 border-b border-slate-200" style={{ height: 46 }}>
+          <div className="flex items-center gap-2">
+            <span className="font-black" style={{ fontSize: 17, color: "#1a6ea8" }}>sarkaristaar</span>
+            <span className="text-slate-300 mx-1">|</span>
+            <span className="text-slate-500 font-semibold" style={{ fontSize: 11 }}>{test.paperName || test.testName || "Mock Test"}</span>
+          </div>
+          <div className="text-center hidden md:block">
+            <div className="font-black text-slate-800" style={{ fontSize: 13 }}>{test.paperName || test.testName || "Mock Test"}</div>
+            <div className="text-slate-400 font-mono" style={{ fontSize: 10 }}>Roll No : {user?.uid?.slice(0, 15).toUpperCase()}</div>
+          </div>
+          <div className="flex items-center gap-3">
+            {!isSubmitted && (
+              <div className="flex flex-col items-center leading-tight">
+                <span style={{ fontSize: 9, color: "#64748b", fontWeight: 700, letterSpacing: "0.05em" }}>Time Left</span>
+                <span className="font-mono font-black" style={{ fontSize: 16, color: timeLeft < 300 ? "#dc2626" : "#1a6ea8" }}>
+                  {String(Math.floor((timeLeft % 3600) / 60)).padStart(2, '0')} : {String(timeLeft % 60).padStart(2, '0')}
+                </span>
+              </div>
+            )}
+            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center">
+              <UserCircle className="w-5 h-5 text-slate-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* SUB-BAR: SYMBOLS | INSTRUCTIONS | OVERALL TEST SUMMARY + answered count */}
         <div className="flex items-center border-b border-slate-200 px-3 h-7 text-[11px] font-bold gap-0">
           <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] border-r border-slate-200 transition-colors">SYMBOLS</button>
           <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] border-r border-slate-200 transition-colors" onClick={() => setIsStarted(false)}>INSTRUCTIONS</button>
           <button className="px-3 h-full hover:bg-slate-50 text-[#0e6f8a] transition-colors">OVERALL TEST SUMMARY</button>
-
           <div className="ml-auto flex items-center gap-1 text-slate-500 font-semibold">
             <span>Total Questions Answered:</span>
-            <span className="text-slate-800 font-black ml-1">
+            <span className="font-black ml-1" style={{ color: "#1a6ea8" }}>
               {Object.keys(answers).filter(k => !markedIndices.has(Number(k))).length}
             </span>
           </div>
@@ -824,49 +849,33 @@ export default function TestPlayer() {
         {/* ── RIGHT: Sidebar ────────────────────────────────── */}
         <aside className="w-72 bg-[#eef1f5] border-l border-slate-200 flex flex-col" style={{ boxShadow: "-2px 0 6px rgba(0,0,0,.04)" }}>
 
-          {/* Section palette header with triangle arrow */}
+          {/* Section palette header — shows current section label */}
           <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-slate-200">
-            {/* Play/triangle icon */}
             <span style={{ color: "#1a6ea8", fontSize: 14 }}>▶</span>
-            <span className="font-black text-slate-700" style={{ fontSize: 12 }}>
-              {currentSection.label}
-            </span>
+            <span className="font-black text-slate-700" style={{ fontSize: 12 }}>{currentSection.label}</span>
           </div>
 
-          {/* Question number grid */}
+          {/* Question number grid — ONLY active section (Testbook style) */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-
-            {/* Per-PART palette */}
-            {SSC_SECTIONS.map((sec, partIdx) => {
-              const { start, end } = partRanges[partIdx];
+            {(() => {
+              const { start, end } = partRanges[activePart];
               const partQs = questions.slice(start, end + 1);
+              const sectionAnswered = Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end && !markedIndices.has(Number(k))).length;
+              const sectionNotAnswered = (end - start + 1) - Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end).length;
+              const sectionMarked = Array.from(markedIndices).filter(i => i >= start && i <= end).length;
 
               return (
-                <div key={sec.part} className="mb-0">
-                  {/* Section header row */}
-                  <div
-                    className="flex items-center px-3 py-1.5 border-b border-t border-slate-200"
-                    style={{ background: activePart === partIdx ? "#dbeafe" : "#f0f3f8", fontSize: 11 }}
-                  >
-                    <span className="font-bold text-slate-700">{sec.label}</span>
-                  </div>
-
-                  {/* Number grid */}
+                <>
                   <div className="p-2 grid grid-cols-5 gap-1.5">
                     {partQs.map((_, relIdx) => {
                       const absIdx = start + relIdx;
-                      const isVisited = visitedIndices.has(absIdx);
                       const isAnswered = !!answers[absIdx];
                       const isMarked = markedIndices.has(absIdx);
+                      const isVisited = visitedIndices.has(absIdx);
                       const isCurrent = currentQIndex === absIdx;
 
-                      let btnStyle: React.CSSProperties = {
-                        background: "#fff",
-                        color: "#555",
-                        border: "1px solid #bbb",
-                        borderRadius: 3,
-                      };
-
+                      // Testbook color scheme: blue=not visited, red=visited+unanswered, green=answered, purple=marked
+                      let btnStyle: React.CSSProperties = { background: "#1a6ea8", color: "#fff", border: "none", borderRadius: 3 };
                       if (isMarked && isAnswered) {
                         btnStyle = { background: "#7c3aed", color: "#fff", border: "none", borderRadius: 3 };
                       } else if (isMarked) {
@@ -876,71 +885,42 @@ export default function TestPlayer() {
                       } else if (isVisited) {
                         btnStyle = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 3 };
                       }
-
-                      if (isCurrent) {
-                        btnStyle = { ...btnStyle, outline: "2px solid #38bdf8", outlineOffset: 1 };
-                      }
+                      if (isCurrent) btnStyle = { ...btnStyle, outline: "2px solid #38bdf8", outlineOffset: 1 };
 
                       return (
-                        <button
-                          key={absIdx}
-                          onClick={() => handleNextPrev(absIdx)}
-                          style={{
-                            ...btnStyle,
-                            width: "100%",
-                            aspectRatio: "1",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            transition: "all .1s",
-                          }}
-                        >
-                          {absIdx + 1}
-                        </button>
+                        <button key={absIdx} onClick={() => handleNextPrev(absIdx)}
+                          style={{ ...btnStyle, width: "100%", aspectRatio: "1", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all .1s" }}
+                        >{absIdx + 1}</button>
                       );
                     })}
                   </div>
 
-                  {/* Per-section stats (like PART-D Analysis in screenshot) */}
-                  {partIdx === SSC_SECTIONS.length - 1 && (
-                    <div className="mx-2 mb-2 border border-slate-300 rounded overflow-hidden" style={{ fontSize: 11 }}>
-                      <div className="bg-slate-200 px-2 py-1 font-black text-slate-700 uppercase tracking-wide" style={{ fontSize: 10 }}>
-                        {sec.part} Analysis
-                      </div>
-                      {[
-                        { label: "Answered", count: Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end && !markedIndices.has(Number(k))).length, color: "#16a34a" },
-                        { label: "Not Answered", count: (end - start + 1) - Object.keys(answers).filter(k => Number(k) >= start && Number(k) <= end).length, color: "#e05c00" },
-                        { label: "Mark for Review", count: Array.from(markedIndices).filter(i => i >= start && i <= end).length, color: "#7c3aed" },
-                      ].map((item) => (
-                        <div key={item.label} className="flex items-center justify-between px-2 py-1 border-t border-slate-200 bg-white">
-                          <span className="text-slate-600">{item.label}</span>
-                          <span className="font-black" style={{ color: item.color }}>{item.count}</span>
-                        </div>
-                      ))}
+                  {/* Section Analysis table (always shown for active section) */}
+                  <div className="mx-2 mb-2 border border-slate-300 rounded overflow-hidden" style={{ fontSize: 11 }}>
+                    <div className="bg-slate-200 px-2 py-1 font-black text-slate-700 uppercase tracking-wide" style={{ fontSize: 10 }}>
+                      {SSC_SECTIONS[activePart].part} Analysis
                     </div>
-                  )}
-                </div>
+                    {[
+                      { label: "Answered", count: sectionAnswered, color: "#16a34a" },
+                      { label: "Not Answered", count: sectionNotAnswered, color: "#e05c00" },
+                      { label: "Mark for Review", count: sectionMarked, color: "#7c3aed" },
+                    ].map((item) => (
+                      <div key={item.label} className="flex items-center justify-between px-2 py-1 border-t border-slate-200 bg-white">
+                        <span className="text-slate-600">{item.label}</span>
+                        <span className="font-black" style={{ color: item.color }}>{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
               );
-            })}
+            })()}
           </div>
 
           {/* Sidebar footer tools */}
           <div className="p-2 gap-1 grid grid-cols-2 bg-white border-t border-slate-200">
-            <button className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all">
-              Question Paper
-            </button>
-            <button
-              onClick={() => setIsStarted(false)}
-              className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all"
-            >
-              Instructions
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="col-span-2 h-9 text-[10px] font-black uppercase bg-sky-500 text-white rounded hover:bg-sky-600 transition-all shadow-md mt-1"
-            >
-              Submit Test
-            </button>
+            <button className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all">Question Paper</button>
+            <button onClick={() => setIsStarted(false)} className="h-8 text-[10px] font-black uppercase bg-sky-100 text-sky-700 rounded hover:bg-sky-200 transition-all">Instructions</button>
+            <button onClick={handleSubmit} className="col-span-2 h-9 text-[10px] font-black uppercase bg-sky-500 text-white rounded hover:bg-sky-600 transition-all shadow-md mt-1">Submit Test</button>
           </div>
         </aside>
       </div>
