@@ -488,6 +488,13 @@ export default function AdminPage() {
         };
       });
 
+      // DEBUG CHECK: Did we find any passages?
+      const passagesFound = parsedData.filter((r: any) => r.passage && r.passage.trim().length > 0);
+      if (passagesFound.length === 0 && parsedData.length > 50) {
+        const headers = Object.keys(parsedData[0] || {}).join(", ");
+        alert(`WARNING: No reading comprehension passages were found in this file!\n\nThe system could not find any column containing the passage text. The columns detected in your file were:\n${headers}\n\nPlease ensure your passage column is correctly filled out.`);
+      }
+
       // Special check: if options_hindi are all empty but we have bilingual data, try to use English as fallback if needed or just keep empty
       // Actually the Player handles the fallback nicely.
 
