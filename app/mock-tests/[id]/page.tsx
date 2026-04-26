@@ -303,6 +303,9 @@ export default function TestPlayer() {
   // and legacy names — so it works regardless of when the test was uploaded.
   const getPassage = (q: any) =>
     q?.passage ||
+    q?.['paragraph questions'] ||
+    q?.['paragraph question'] ||
+    q?.paragraph ||
     q?.['passage question header'] ||
     q?.['passage question Header'] ||
     q?.comprehension ||

@@ -267,10 +267,10 @@ export default function AdminPage() {
       parsedData = parsedData.filter((q: any) => {
         if (!q) return false;
         // dynamically find any key that looks like a question column
-        // IMPORTANT: exclude 'passage' and 'header' so 'passage question header' is never picked
+        // IMPORTANT: exclude 'passage', 'header', and 'paragraph' so columns like 'passage question header' or 'Paragraph Questions' are never picked
         const questionKey = Object.keys(q).find(k => {
           const lk = k.toLowerCase();
-          return lk.includes('question') && !lk.includes('image') && !lk.includes('passage') && !lk.includes('header');
+          return lk.includes('question') && !lk.includes('image') && !lk.includes('passage') && !lk.includes('header') && !lk.includes('paragraph');
         });
         if (!questionKey) return false;
         return String(q[questionKey] || "").trim() !== "";
@@ -454,15 +454,19 @@ export default function AdminPage() {
         const passage = (() => {
           // Exact match attempts (after CSV/Excel lowercasing)
           const exact =
+            findExact(row, 'paragraph questions') ||
+            findExact(row, 'paragraph question') ||
+            findExact(row, 'paragraph') ||
             findExact(row, 'passage question header') ||
             findExact(row, 'passage question Header') ||
             findExact(row, 'passage') ||
             findExact(row, 'comprehension') ||
+            findValue(row, ['paragraph', 'questions']) ||
             findValue(row, ['passage', 'header']) ||
             findValue(row, ['comprehension']);
           if (exact) return exact;
-          // Last resort: scan ALL keys for anything containing 'passage'
-          const passageKey = Object.keys(row).find(k => k.toLowerCase().includes('passage'));
+          // Last resort: scan ALL keys for anything containing 'passage' or 'paragraph'
+          const passageKey = Object.keys(row).find(k => k.toLowerCase().includes('passage') || k.toLowerCase().includes('paragraph'));
           return passageKey ? row[passageKey] : undefined;
         })();
 
