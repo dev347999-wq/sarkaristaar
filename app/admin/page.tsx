@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { getUploadedTestsMetadata, deleteMockTest, updateMockTestLockStatus, uploadPracticeQuestions, getAllPurchases } from "@/lib/database";
 import Papa from "papaparse";
 import ExcelJS from "exceljs";
-
+import * as XLSX from "xlsx";
 const CATEGORIES = [
   "SSC CGL Tier 1",
   "SSC CGL Tier 2",
@@ -214,35 +214,47 @@ export default function AdminPage() {
             setUploadProgress({ done: doneCount, total: uploadTasks.length });
           }));
 
-          // 2. Extract Data from rows
+          // 2. Extract Data from rows using SheetJS to preserve HTML formatting natively
+          const wbSheetJS = XLSX.read(buffer, { type: 'array', cellHTML: true });
+          const firstSheetName = wbSheetJS.SheetNames[0];
+          const wsSheetJS = wbSheetJS.Sheets[firstSheetName];
+          const range = XLSX.utils.decode_range(wsSheetJS['!ref'] || "A1:A1");
+          
           const rows: any[] = [];
-          const headerRow = worksheet.getRow(1);
           const headers: string[] = [];
-          headerRow.eachCell((cell, colNumber) => {
-            headers[colNumber] = String(cell.value || "").trim().toLowerCase();
-          });
+          
+          // Get headers from first row (0-indexed in SheetJS)
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+             const cell = wsSheetJS[XLSX.utils.encode_cell({c:C, r:range.s.r})];
+             headers[C] = cell ? String(cell.v || "").trim().toLowerCase() : "";
+          }
 
-          worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber === 1) return; // Skip header
-            const rowData: any = {};
-            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-              const header = headers[colNumber];
-              if (header) {
-                // If it's an image-potential cell, check the map
-                const cellImages = imageMap[`${rowNumber}-${colNumber}`];
-                if (cellImages && cellImages.length > 0) {
-                  rowData[header] = cellImages[0]; // Take first image URL
-                } else {
-                  rowData[header] = cell.value;
-                  // DEBUG: Check what exceljs thinks is in the cell
-                  if (cell.value && JSON.stringify(cell.value).includes('homonym')) {
-                    alert(`DEBUG INFO FOR "HOMONYM" QUESTION:\n${JSON.stringify(cell.value, null, 2)}`);
-                  }
+          // Get data
+          for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+             const rowData: any = {};
+             for (let C = range.s.c; C <= range.e.c; ++C) {
+                const header = headers[C];
+                if (header) {
+                   // Image check logic: exceljs mapped images using 1-indexed row/col
+                   const exceljsRow = R + 1;
+                   const exceljsCol = C + 1;
+                   const cellImages = imageMap[`${exceljsRow}-${exceljsCol}`];
+                   
+                   if (cellImages && cellImages.length > 0) {
+                     rowData[header] = cellImages[0];
+                   } else {
+                     const cell = wsSheetJS[XLSX.utils.encode_cell({c:C, r:R})];
+                     if (cell) {
+                       // Prefer cell.h (HTML) if available, otherwise raw text
+                       rowData[header] = cell.h ? String(cell.h) : String(cell.v || "");
+                     } else {
+                       rowData[header] = "";
+                     }
+                   }
                 }
-              }
-            });
-            rows.push(rowData);
-          });
+             }
+             rows.push(rowData);
+          }
           parsedData = rows;
         } else {
           // Standard CSV parser
