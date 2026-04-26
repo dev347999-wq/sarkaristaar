@@ -306,6 +306,16 @@ export default function TestPlayer() {
   );
   const hasPassage = passageText.trim().length > 0;
 
+  // Find the range of questions that share this same passage (for "Que No. X - Y" label)
+  const passageRange = (() => {
+    if (!hasPassage) return null;
+    let first = currentQIndex;
+    let last = currentQIndex;
+    while (first > 0 && safeText(questions[first - 1]?.passage || questions[first - 1]?.comprehension || "") === passageText) first--;
+    while (last < totalQs - 1 && safeText(questions[last + 1]?.passage || questions[last + 1]?.comprehension || "") === passageText) last++;
+    return { first: first + 1, last: last + 1 }; // 1-indexed for display
+  })();
+
   // ─── INSTRUCTIONS SCREEN ──────────────────────────────────────────────────
   if (!isStarted) {
     const isHindi = selectedLanguage === "hindi";
@@ -641,17 +651,6 @@ export default function TestPlayer() {
             </button>
           )}
 
-          {/* Timer */}
-          {!isSubmitted && (
-            <div className="ml-auto flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded" style={{ fontSize: 12 }}>
-              <Clock className="w-3.5 h-3.5 text-slate-500" />
-              <span className="font-mono font-bold text-slate-700">
-                {String(Math.floor(timeLeft / 3600)).padStart(2, '0')}:
-                {String(Math.floor((timeLeft % 3600) / 60)).padStart(2, '0')}:
-                {String(timeLeft % 60).padStart(2, '0')}
-              </span>
-            </div>
-          )}
         </div>
       </header>
 
@@ -695,19 +694,14 @@ export default function TestPlayer() {
             <div className="flex-1 flex overflow-hidden">
               {/* Passage panel */}
               <div className="w-[45%] border-r border-slate-200 overflow-y-auto custom-scrollbar p-5" style={{ background: "#fafafa" }}>
-                {/* Comprehension label */}
+                {/* Comprehension label — italic underline like Testbook */}
                 <div className="mb-3">
-                  <span className="font-bold text-slate-700 underline" style={{ fontSize: 13 }}>Comprehension:</span>
-                  {/* Find the range label - e.g. Que No. 22 - 25 */}
-                  {(() => {
-                    const partStart = partRanges[currentPartIndex].start;
-                    const partEnd = partRanges[currentPartIndex].end;
-                    return (
-                      <span className="ml-2 text-slate-500" style={{ fontSize: 12 }}>
-                        (Que No. {partStart + 1} - {partEnd + 1})
-                      </span>
-                    );
-                  })()}
+                  <span className="italic underline text-slate-700 font-semibold" style={{ fontSize: 13 }}>Comprehension:</span>
+                  {passageRange && (
+                    <span className="ml-2 text-slate-500" style={{ fontSize: 12 }}>
+                      (Que No. {passageRange.first} - {passageRange.last})
+                    </span>
+                  )}
                 </div>
 
                 <p className="font-bold text-slate-800 mb-3" style={{ fontSize: 13 }}>Read the comprehension and answer below:</p>

@@ -447,6 +447,15 @@ export default function AdminPage() {
           findValue(row, ['answer', 'image']) ||
           findValue(row, ['solution', 'image']);
 
+        // ── Comprehension / Passage ─────────────────────────────────────
+        // Supports: "Passage Question header", "passage", "comprehension"
+        const passage =
+          findExact(row, 'passage question header') ||
+          findExact(row, 'passage question Header') ||
+          findExact(row, 'passage') ||
+          findValue(row, ['passage', 'header']) ||
+          findValue(row, ['comprehension']);
+
         // Always save BOTH English and Hindi — students see their chosen language at test time
         return {
           id: cellToString(row.id || row._id || row['questions id'] || ""),
@@ -460,7 +469,8 @@ export default function AdminPage() {
           explanation: cellToString(explanation),
           explanation_hindi: cellToString(explanationHindi),
           imageUrl: toDirectImageUrl(questionImage),
-          solutionImageUrl: toDirectImageUrl(answerImage)
+          solutionImageUrl: toDirectImageUrl(answerImage),
+          passage: cellToString(passage),  // comprehension passage text
         };
       });
 
