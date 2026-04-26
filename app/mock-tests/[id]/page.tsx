@@ -482,7 +482,7 @@ export default function TestPlayer() {
                         </div>
                       );
                     }
-                    return <span key={pi} className="whitespace-pre-wrap">{part}</span>;
+                    return <span key={pi} className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: part }} />;
                   });
                 })()}
               </span>
@@ -711,9 +711,11 @@ export default function TestPlayer() {
               <div className="w-[45%] h-full overflow-y-scroll passage-scrollbar p-5" style={{ background: "#fafafa" }}>
 
 
-                <div className="text-slate-800 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 13 }}>
-                  {passageText}
-                </div>
+                <div 
+                  className="text-slate-800 leading-relaxed whitespace-pre-wrap" 
+                  style={{ fontSize: 13 }}
+                  dangerouslySetInnerHTML={{ __html: passageText }}
+                />
 
                 {/* Passage image if any */}
                 {currentQ.passageImageUrl && toDirectImageUrl(safeText(currentQ.passageImageUrl)).startsWith('http') && (
@@ -729,9 +731,11 @@ export default function TestPlayer() {
                 {/* Question label */}
                 <p className="font-bold text-slate-800 underline mb-3" style={{ fontSize: 13 }}>Question:</p>
 
-                <p className="text-slate-800 leading-snug whitespace-pre-wrap mb-4" style={{ fontSize: 13 }}>
-                  {selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
-                </p>
+                <div 
+                  className="text-slate-800 leading-snug whitespace-pre-wrap mb-4" 
+                  style={{ fontSize: 13 }} 
+                  dangerouslySetInnerHTML={{ __html: selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question) }}
+                />
 
                 {/* Question image */}
                 {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
@@ -756,9 +760,11 @@ export default function TestPlayer() {
                       <BookOpen className="w-4 h-4" />
                       <span className="font-black uppercase tracking-widest" style={{ fontSize: 10 }}>Solution Explanation</span>
                     </div>
-                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 12 }}>
-                      {safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
-                    </div>
+                    <div 
+                      className="text-slate-700 leading-relaxed whitespace-pre-wrap" 
+                      style={{ fontSize: 12 }}
+                      dangerouslySetInnerHTML={{ __html: safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) }}
+                    />
                   </div>
                 )}
               </div>
@@ -767,9 +773,11 @@ export default function TestPlayer() {
             /* ── NORMAL LAYOUT (no passage) ── */
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               <div className="max-w-3xl mx-auto">
-                <p className="text-slate-800 leading-relaxed whitespace-pre-wrap mb-5" style={{ fontSize: 15, fontWeight: 500 }}>
-                  {selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question)}
-                </p>
+                <div 
+                  className="text-slate-800 leading-relaxed whitespace-pre-wrap mb-5" 
+                  style={{ fontSize: 15, fontWeight: 500 }}
+                  dangerouslySetInnerHTML={{ __html: selectedLanguage === "hindi" ? safeText(currentQ.question_hindi || currentQ.question) : safeText(currentQ.question) }}
+                />
 
                 {currentQ.imageUrl && toDirectImageUrl(safeText(currentQ.imageUrl)).startsWith('http') && (
                   <div className="rounded-xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50 p-4 mb-5">
@@ -790,9 +798,11 @@ export default function TestPlayer() {
                       <BookOpen className="w-5 h-5" />
                       <h3 className="font-black uppercase tracking-[0.15em]" style={{ fontSize: 11 }}>Solution Explanation</h3>
                     </div>
-                    <div className="text-slate-700 leading-relaxed whitespace-pre-wrap prose prose-slate max-w-none" style={{ fontSize: 13 }}>
-                      {safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation)}
-                    </div>
+                    <div 
+                      className="text-slate-700 leading-relaxed whitespace-pre-wrap prose prose-slate max-w-none" 
+                      style={{ fontSize: 13 }}
+                      dangerouslySetInnerHTML={{ __html: safeText(selectedLanguage === "hindi" ? (currentQ.explanation_hindi || currentQ.explanation) : currentQ.explanation) }}
+                    />
                     {currentQ.solutionImageUrl && toDirectImageUrl(safeText(currentQ.solutionImageUrl)).startsWith('http') && (
                       <div className="mt-4 rounded-xl overflow-hidden border border-slate-200 bg-white p-3 shadow-sm">
                         {/* eslint-disable-next-line @next/next/no-img-element */}

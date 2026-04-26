@@ -300,7 +300,7 @@ export default function AdminPage() {
         return found ? row[found] : undefined;
       };
 
-      // Helper to convert Excel rich text cell objects to plain strings
+      // Helper to convert Excel rich text cell objects to HTML strings
       const cellToString = (val: any): string => {
         if (val == null) return "";
         if (typeof val === 'string') return val;
@@ -308,16 +308,28 @@ export default function AdminPage() {
         if (Array.isArray(val)) {
           return val.map((item: any) => {
             if (typeof item === 'string') return item;
-            if (item && typeof item === 'object') return item.richText || item.text || item.t || item.v || '';
+            if (item && typeof item === 'object') {
+              if (item.richText) return cellToString(item.richText);
+              let text = item.text || item.t || item.v || '';
+              if (item.font && text) {
+                if (item.font.bold) text = `<b>${text}</b>`;
+                if (item.font.italic) text = `<i>${text}</i>`;
+                if (item.font.underline) text = `<u>${text}</u>`;
+              }
+              return text;
+            }
             return String(item || '');
           }).join('');
         }
         if (typeof val === 'object') {
           if (val.richText) return cellToString(val.richText);
-          if (val.text) return String(val.text);
-          if (val.t) return String(val.t);
-          if (val.v) return String(val.v);
-          return '';
+          let text = val.text || val.t || val.v || '';
+          if (val.font && text) {
+            if (val.font.bold) text = `<b>${text}</b>`;
+            if (val.font.italic) text = `<i>${text}</i>`;
+            if (val.font.underline) text = `<u>${text}</u>`;
+          }
+          return text;
         }
         return String(val);
       };
