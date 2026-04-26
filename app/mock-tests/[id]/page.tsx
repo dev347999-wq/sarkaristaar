@@ -309,12 +309,14 @@ export default function TestPlayer() {
     q?.passage_text ||
     "";
 
-  const passageText: string = safeText(
-    selectedLanguage === "hindi"
-      ? (getPassage(currentQ))
-      : (getPassage(currentQ))
-  );
+  const passageText: string = safeText(getPassage(currentQ));
   const hasPassage = passageText.trim().length > 0;
+
+  // DEBUG: log question keys so admin can verify passage field is present in DB
+  if (typeof window !== "undefined") {
+    console.log("[DEBUG] Q" + (currentQIndex + 1) + " keys:", Object.keys(currentQ || {}));
+    console.log("[DEBUG] passage value:", getPassage(currentQ) || "(empty — test needs to be re-uploaded from admin)");
+  }
 
   // Find the range of questions sharing this same passage (for "Que No. X - Y" label)
   const passageRange = (() => {
