@@ -655,7 +655,7 @@ export default function AdminPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Portal (v2)</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Admin Portal (v3 - Rich Text)</h1>
           <p className="text-muted-foreground mt-2">Upload bulk questions for exactly {CATEGORIES.length} Mock Test Categories.</p>
         </div>
         <span className="flex h-6 items-center px-2 text-xs font-semibold rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400">
