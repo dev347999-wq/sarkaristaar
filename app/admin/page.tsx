@@ -252,6 +252,7 @@ export default function AdminPage() {
               skipEmptyLines: true,
               transformHeader: (h) => h.trim().toLowerCase(),
               complete: (results) => {
+                alert(`⚠️ FORMATTING WARNING ⚠️\n\nYou just uploaded a CSV file!\n\nCSV files automatically DELETE all bold, italic, and underline formatting. Your bold words are permanently gone.\n\nPlease go back to Google Sheets, click File -> Download -> Microsoft Excel (.xlsx), and upload the Excel file instead!`);
                 if (results.errors.length > 0) {
                   console.warn("CSV File Parsing Warnings:", results.errors);
                 }
