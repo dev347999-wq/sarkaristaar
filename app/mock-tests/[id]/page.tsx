@@ -299,20 +299,30 @@ export default function TestPlayer() {
   const currentSection = SSC_SECTIONS[currentPartIndex];
 
   // Does this question have a passage/comprehension text?
+  // Check all possible field names: new 'passage' key, raw CSV-lowercased key,
+  // and legacy names — so it works regardless of when the test was uploaded.
+  const getPassage = (q: any) =>
+    q?.passage ||
+    q?.['passage question header'] ||
+    q?.['passage question Header'] ||
+    q?.comprehension ||
+    q?.passage_text ||
+    "";
+
   const passageText: string = safeText(
     selectedLanguage === "hindi"
-      ? (currentQ.passage_hindi || currentQ.passage || currentQ.comprehension || "")
-      : (currentQ.passage || currentQ.comprehension || currentQ.passage_text || "")
+      ? (getPassage(currentQ))
+      : (getPassage(currentQ))
   );
   const hasPassage = passageText.trim().length > 0;
 
-  // Find the range of questions that share this same passage (for "Que No. X - Y" label)
+  // Find the range of questions sharing this same passage (for "Que No. X - Y" label)
   const passageRange = (() => {
     if (!hasPassage) return null;
     let first = currentQIndex;
     let last = currentQIndex;
-    while (first > 0 && safeText(questions[first - 1]?.passage || questions[first - 1]?.comprehension || "") === passageText) first--;
-    while (last < totalQs - 1 && safeText(questions[last + 1]?.passage || questions[last + 1]?.comprehension || "") === passageText) last++;
+    while (first > 0 && safeText(getPassage(questions[first - 1])) === passageText) first--;
+    while (last < totalQs - 1 && safeText(getPassage(questions[last + 1])) === passageText) last++;
     return { first: first + 1, last: last + 1 }; // 1-indexed for display
   })();
 

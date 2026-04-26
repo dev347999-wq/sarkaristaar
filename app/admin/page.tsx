@@ -448,13 +448,22 @@ export default function AdminPage() {
           findValue(row, ['solution', 'image']);
 
         // ── Comprehension / Passage ─────────────────────────────────────
-        // Supports: "Passage Question header", "passage", "comprehension"
-        const passage =
-          findExact(row, 'passage question header') ||
-          findExact(row, 'passage question Header') ||
-          findExact(row, 'passage') ||
-          findValue(row, ['passage', 'header']) ||
-          findValue(row, ['comprehension']);
+        // Tries every known variant of the column name the user might use.
+        // Falls back to scanning ALL row keys for any key containing 'passage'.
+        const passage = (() => {
+          // Exact match attempts (after CSV/Excel lowercasing)
+          const exact =
+            findExact(row, 'passage question header') ||
+            findExact(row, 'passage question Header') ||
+            findExact(row, 'passage') ||
+            findExact(row, 'comprehension') ||
+            findValue(row, ['passage', 'header']) ||
+            findValue(row, ['comprehension']);
+          if (exact) return exact;
+          // Last resort: scan ALL keys for anything containing 'passage'
+          const passageKey = Object.keys(row).find(k => k.toLowerCase().includes('passage'));
+          return passageKey ? row[passageKey] : undefined;
+        })();
 
         // Always save BOTH English and Hindi — students see their chosen language at test time
         return {
