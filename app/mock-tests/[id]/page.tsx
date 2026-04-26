@@ -471,7 +471,7 @@ export default function TestPlayer() {
                 {(() => {
                   const s = safeText(option);
                   const hasUrl = /https?:\/\//i.test(s);
-                  if (!hasUrl) return s;
+                  if (!hasUrl) return <span dangerouslySetInnerHTML={{ __html: s }} />;
                   const parts = s.split(/(https?:\/\/[^\s\n\r<>]+)/gi);
                   return parts.map((part, pi) => {
                     if (/^https?:\/\//i.test(part.trim())) {
