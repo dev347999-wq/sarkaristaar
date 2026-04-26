@@ -267,9 +267,10 @@ export default function AdminPage() {
       parsedData = parsedData.filter((q: any) => {
         if (!q) return false;
         // dynamically find any key that looks like a question column
+        // IMPORTANT: exclude 'passage' and 'header' so 'passage question header' is never picked
         const questionKey = Object.keys(q).find(k => {
           const lk = k.toLowerCase();
-          return lk.includes('question') && !lk.includes('image');
+          return lk.includes('question') && !lk.includes('image') && !lk.includes('passage') && !lk.includes('header');
         });
         if (!questionKey) return false;
         return String(q[questionKey] || "").trim() !== "";
