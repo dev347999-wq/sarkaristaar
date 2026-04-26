@@ -702,7 +702,7 @@ export default function TestPlayer() {
             /* ── SPLIT: passage left, question right ─ */
             <div className="flex-1 flex overflow-hidden">
               {/* Passage panel */}
-              <div className="w-[45%] border-r border-slate-200 overflow-y-auto custom-scrollbar p-5" style={{ background: "#fafafa" }}>
+              <div className="w-[45%] overflow-y-auto passage-scrollbar p-5" style={{ background: "#fafafa" }}>
                 {/* Comprehension label — italic underline like Testbook */}
                 <div className="mb-3">
                   <span className="italic underline text-slate-700 font-semibold" style={{ fontSize: 13 }}>Comprehension:</span>
@@ -728,11 +728,8 @@ export default function TestPlayer() {
                 )}
               </div>
 
-              {/* Scrollable divider for passage (browser default) */}
-              <div className="w-1.5 bg-slate-200 cursor-col-resize flex-shrink-0" />
-
               {/* Question + options panel */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col border-l border-slate-200">
                 {/* Question label */}
                 <p className="font-bold text-slate-800 underline mb-3" style={{ fontSize: 13 }}>Question:</p>
 
