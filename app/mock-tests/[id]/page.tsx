@@ -700,6 +700,13 @@ export default function TestPlayer() {
             </div>
           </div>
 
+          {/* ── DEBUG STRIP: visible on screen — remove after confirming passage works ── */}
+          <div className="px-4 py-1 text-[10px] bg-yellow-50 border-b border-yellow-200 text-yellow-800 flex flex-wrap gap-x-4">
+            <span><strong>hasPassage:</strong> {hasPassage ? "✅ YES" : "❌ NO"}</span>
+            <span><strong>passage field:</strong> {passageText ? passageText.slice(0, 60) + "..." : "(empty)"}</span>
+            <span><strong>Q keys:</strong> {Object.keys(currentQ || {}).join(", ")}</span>
+          </div>
+
           {/* ── COMPREHENSION SPLIT LAYOUT or NORMAL LAYOUT ─── */}
           {hasPassage ? (
             /* ── SPLIT: passage left, question right ─ */
