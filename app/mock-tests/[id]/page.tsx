@@ -699,15 +699,16 @@ export default function TestPlayer() {
 
           {/* ── COMPREHENSION SPLIT LAYOUT or NORMAL LAYOUT ─── */}
           <style dangerouslySetInnerHTML={{__html: `
-            .passage-scrollbar::-webkit-scrollbar { width: 12px; }
-            .passage-scrollbar::-webkit-scrollbar-track { background: transparent; border-left: 1px solid #e2e8f0; }
-            .passage-scrollbar::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 12px; border: 2px solid #fafafa; }
+            .passage-scrollbar::-webkit-scrollbar { width: 12px !important; display: block !important; -webkit-appearance: none !important; }
+            .passage-scrollbar::-webkit-scrollbar-track { background: #f8fafc !important; border-left: 1px solid #e2e8f0 !important; }
+            .passage-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1 !important; border-radius: 12px !important; border: 2px solid #f8fafc !important; }
+            .passage-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8 !important; }
           `}} />
           {hasPassage ? (
             /* ── SPLIT: passage left, question right ─ */
             <div className="flex-1 flex overflow-hidden min-h-0">
               {/* Passage panel */}
-              <div className="w-[45%] h-full overflow-y-auto passage-scrollbar p-5" style={{ background: "#fafafa" }}>
+              <div className="w-[45%] h-full overflow-y-scroll passage-scrollbar p-5" style={{ background: "#fafafa" }}>
 
 
                 <div className="text-slate-800 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 13 }}>
