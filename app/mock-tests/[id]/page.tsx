@@ -705,9 +705,9 @@ export default function TestPlayer() {
           `}} />
           {hasPassage ? (
             /* ── SPLIT: passage left, question right ─ */
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex overflow-hidden min-h-0">
               {/* Passage panel */}
-              <div className="w-[45%] overflow-y-auto passage-scrollbar p-5" style={{ background: "#fafafa" }}>
+              <div className="w-[45%] h-full overflow-y-auto passage-scrollbar p-5" style={{ background: "#fafafa" }}>
 
 
                 <div className="text-slate-800 leading-relaxed whitespace-pre-wrap" style={{ fontSize: 13 }}>
@@ -724,7 +724,7 @@ export default function TestPlayer() {
               </div>
 
               {/* Question + options panel */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 flex flex-col border-l border-slate-200">
+              <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-5 flex flex-col border-l border-slate-200">
                 {/* Question label */}
                 <p className="font-bold text-slate-800 underline mb-3" style={{ fontSize: 13 }}>Question:</p>
 
